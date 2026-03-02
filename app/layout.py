@@ -4,6 +4,20 @@ from dash import html, dcc, callback, Output, Input
 import dash_bootstrap_components as dbc
 from app.components.navbar import create_navbar
 
+# Import page modules at module level (not inside callback)
+# This is safe because pages are already registered by Dash's use_pages
+from app.pages import dashboard, market_data, screener, options_chain, backtester, settings
+
+# Route mapping
+_ROUTES = {
+    "/": dashboard.layout,
+    "/market-data": market_data.layout,
+    "/screener": screener.layout,
+    "/options-chain": options_chain.layout,
+    "/backtester": backtester.layout,
+    "/settings": settings.layout,
+}
+
 
 def create_layout():
     return html.Div([
@@ -33,19 +47,8 @@ def create_layout():
 @callback(Output("page-content", "children"), Input("url", "pathname"))
 def display_page(pathname):
     """Route to the appropriate page based on URL pathname."""
-    from app.pages import dashboard, market_data, screener, options_chain, backtester, settings
-
-    routes = {
-        "/": dashboard.layout,
-        "/market-data": market_data.layout,
-        "/screener": screener.layout,
-        "/options-chain": options_chain.layout,
-        "/backtester": backtester.layout,
-        "/settings": settings.layout,
-    }
-
-    if pathname in routes:
-        return routes[pathname]
+    if pathname in _ROUTES:
+        return _ROUTES[pathname]
 
     # 404 fallback
     return html.Div([
