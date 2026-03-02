@@ -2,12 +2,14 @@
 FROM python:3.11-slim AS builder
 
 WORKDIR /build
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc g++ && \
+
+# Use Chinese mirrors for apt and pip
+RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources && \
+    apt-get update && apt-get install -y --no-install-recommends gcc g++ && \
     rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+RUN pip install --no-cache-dir --prefix=/install -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com -r requirements.txt
 
 # Runtime stage
 FROM python:3.11-slim
