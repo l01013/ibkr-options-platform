@@ -73,7 +73,12 @@ class IBKRConnectionManager:
         port: int | None = None,
         client_id: int | None = None,
     ) -> bool:
-        """Connect to IB Gateway (synchronous, called from Dash thread)."""
+        """Connect to IB Gateway (synchronous, called from Dash thread).
+        
+        Note: IBKR username and password are configured via environment variables
+        (IBKR_USERNAME, IBKR_PASSWORD) and used by the IB Gateway Docker container.
+        This method connects to the already-running IB Gateway instance.
+        """
         host = host or settings.IBKR_HOST
         port = port or settings.IBKR_PORT
         client_id = client_id or settings.IBKR_CLIENT_ID
@@ -91,8 +96,22 @@ class IBKRConnectionManager:
             self._status.reconnect_attempts = 0
             self._status.server_version = self._ib.client.serverVersion() if self._ib.client else 0
 
+            # Get managed accounts with fallback methods
             accounts = self._ib.managedAccounts()
-            self._status.account = accounts[0] if accounts else ""
+            if not accounts or len(accounts) == 0:
+                # Try alternative method to get account
+                try:
+                    account_summary = self._ib.accountSummary()
+                    if account_summary and len(account_summary) > 0:
+                        self._status.account = account_summary[0].account
+                    else:
+                        self._status.account = "Unknown"
+                except Exception as e:
+                    logger.warning(f"Failed to get account info: {e}")
+                    self._status.account = "Unknown"
+            else:
+                self._status.account = accounts[0]
+            
             self._status.message = f"Connected (account: {self._status.account})"
             logger.info("Connected to IBKR at %s:%d, account=%s", host, port, self._status.account)
             return True

@@ -26,6 +26,10 @@ layout = html.Div([
                     dbc.Label("Client ID"),
                     dbc.Input(id="set-client-id", type="number", value=1, className="mb-3"),
 
+                    # Display current account (read-only)
+                    dbc.Label("Connected Account"),
+                    dbc.Input(id="set-account-display", type="text", placeholder="Not connected", readOnly=True, className="mb-3", disabled=True),
+
                     dbc.Label("Trading Mode"),
                     dbc.RadioItems(
                         id="set-trading-mode",
@@ -107,6 +111,7 @@ layout = html.Div([
 @callback(
     Output("set-conn-status", "children"),
     Output("set-system-info", "children"),
+    Output("set-account-display", "value"),
     Input("set-interval", "n_intervals"),
 )
 def update_status(n):
@@ -116,6 +121,7 @@ def update_status(n):
         return (
             connection_badge("disconnected", "Services not initialized"),
             html.P("Initializing...", className="text-muted"),
+            "Not connected",
         )
 
     conn_mgr = services["conn_mgr"]
@@ -126,12 +132,12 @@ def update_status(n):
         html.P([html.Strong("IBKR Host: "), settings.IBKR_HOST]),
         html.P([html.Strong("IBKR Port: "), str(settings.IBKR_PORT)]),
         html.P([html.Strong("Mode: "), settings.IBKR_TRADING_MODE]),
-        html.P([html.Strong("Account: "), status.account or "N/A"]),
+        html.P([html.Strong("Connected Account: "), status.account or "N/A"]),
         html.P([html.Strong("Server Version: "), str(status.server_version) if status.server_version else "N/A"]),
         html.P([html.Strong("DB Path: "), settings.DB_PATH]),
     ])
 
-    return connection_badge(status.state.value, status.message), info
+    return connection_badge(status.state.value, status.message), info, status.account or "Not connected"
 
 
 @callback(
