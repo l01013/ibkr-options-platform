@@ -77,7 +77,7 @@ layout = html.Div([
                     html.H6("Benchmark Comparison", className="fw-bold mb-2"),
                     
                     dbc.Label("Select Benchmarks (Hold Ctrl for multiple)"),
-                    dbc.Select(
+                    dcc.Dropdown(
                         id="bt-benchmarks",
                         options=[
                             {"label": "QQQ - Nasdaq-100 ETF", "value": "QQQ"},
