@@ -2,8 +2,8 @@ services:
   ibgateway:
     image: ghcr.io/extrange/ibkr:stable
     ports:
-      - "127.0.0.1:6080:6080"  # noVNC browser access
-      - "127.0.0.1:8888:8888"  # API access (auto-forwards 4002)
+      - "6080:6080"  # noVNC browser access
+      - "8888:8888"  # API access (auto-forwards 4002)
     ulimits:
       nofile: 10000
     environment:
