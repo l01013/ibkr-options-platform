@@ -72,6 +72,29 @@ layout = html.Div([
                     dbc.Label("Stop Loss (% of premium)"),
                     dbc.Input(id="bt-stop-loss", type="number", value=200, size="sm", className="mb-3"),
                     
+                    # Benchmark Comparison
+                    html.Hr(),
+                    html.H6("Benchmark Comparison", className="fw-bold mb-2"),
+                    
+                    dbc.Label("Select Benchmarks (Hold Ctrl for multiple)"),
+                    dbc.Select(
+                        id="bt-benchmarks",
+                        options=[
+                            {"label": "QQQ - Nasdaq-100 ETF", "value": "QQQ"},
+                            {"label": "SPY - S&P 500 ETF", "value": "SPY"},
+                            {"label": "IWM - Russell 2000 ETF", "value": "IWM"},
+                            {"label": "NVDA - NVIDIA Corporation", "value": "NVDA"},
+                            {"label": "TSLA - Tesla Inc", "value": "TSLA"},
+                            {"label": "AAPL - Apple Inc", "value": "AAPL"},
+                            {"label": "MSFT - Microsoft Corporation", "value": "MSFT"},
+                            {"label": "GOOGL - Alphabet Inc", "value": "GOOGL"},
+                            {"label": "AMZN - Amazon.com Inc", "value": "AMZN"},
+                        ],
+                        value=[],
+                        multi=True,
+                        className="mb-3",
+                    ),
+                    
                     # Wheel Strategy Specific Parameters
                     html.Div(id="wheel-params-container", children=[
                         html.Hr(),
@@ -143,12 +166,13 @@ def toggle_wheel_params(strategy):
     State("bt-put-delta", "value"),
     State("bt-call-delta", "value"),
     State("bt-max-positions", "value"),
+    State("bt-benchmarks", "value"),
     prevent_initial_call=True,
 )
 def run_backtest(
     n_clicks, strategy, symbol, start_date, end_date,
     capital, position_size, leverage, dte_min, dte_max, delta, profit_target, stop_loss,
-    put_delta, call_delta, max_positions
+    put_delta, call_delta, max_positions, benchmarks
 ):
     if not symbol or not start_date or not end_date:
         return no_update, no_update
@@ -159,6 +183,7 @@ def run_backtest(
         return {}, html.P("Services not initialized", className="text-warning")
 
     engine = services["backtest_engine"]
+    data_client = services.get("data_client")
 
     params = {
         "strategy": strategy,
@@ -179,8 +204,26 @@ def run_backtest(
         "max_positions": max_positions or 1,
     }
 
+    # Get benchmark data if requested
+    benchmark_data = {}
+    if benchmarks and data_client:
+        try:
+            from core.backtesting.benchmark import BenchmarkService
+            benchmark_service = BenchmarkService(data_client)
+            benchmark_data = benchmark_service.get_multiple_benchmarks(
+                symbols=benchmarks,
+                start_date=start_date,
+                end_date=end_date,
+                initial_capital=capital or 100000
+            )
+        except Exception as e:
+            print(f"Warning: Could not fetch benchmark data: {e}")
+            benchmark_data = {}
+
     try:
         result = engine.run(params)
+        # Add benchmark data to result
+        result["benchmark_data"] = benchmark_data
     except Exception as e:
         return {}, html.P(f"Backtest error: {e}", className="text-danger")
 
@@ -208,7 +251,13 @@ def run_backtest(
     pnl_dates = [p["date"] for p in daily_pnl] if daily_pnl else []
     pnl_values = [p["cumulative_pnl"] for p in daily_pnl] if daily_pnl else []
     initial_capital = params.get("initial_capital", 100000)
-    pnl_chart = dcc.Graph(figure=create_pnl_chart(pnl_dates, pnl_values, initial_capital=initial_capital))
+    benchmark_data = result.get("benchmark_data", {})
+    pnl_chart = dcc.Graph(figure=create_pnl_chart(
+        pnl_dates, 
+        pnl_values, 
+        benchmark_data=benchmark_data,
+        initial_capital=initial_capital
+    ))
 
     # Monthly heatmap
     monthly = metrics.get("monthly_returns", {})

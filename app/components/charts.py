@@ -104,11 +104,14 @@ def create_candlestick_chart(
 def create_pnl_chart(
     dates: list,
     pnl_values: list[float],
-    benchmark_values: list[float] | None = None,
+    benchmark_data: dict | None = None,
     initial_capital: float | None = None,
     title: str = "P&L Curve",
 ) -> go.Figure:
-    """Create a P&L curve chart with optional benchmark comparison and percentage display."""
+    """Create a P&L curve chart with optional benchmark comparison and percentage display.
+    
+    benchmark_data: dict with format {'symbol': [{'date': str, 'cumulative_pnl': float, 'percentage_return': float}, ...]}
+    """
     fig = go.Figure()
 
     # Add P&L in dollars (primary trace)
@@ -135,15 +138,39 @@ def create_pnl_chart(
     
     fig.add_trace(strategy_trace)
 
-    if benchmark_values:
-        fig.add_trace(
-            go.Scatter(
-                x=dates,
-                y=benchmark_values,
-                name="Benchmark (B&H)",
-                line=dict(color="#FFA726", width=1.5, dash="dash"),
+    # Add multiple benchmarks if provided
+    if benchmark_data:
+        benchmark_colors = ["#FFA726", "#AB47BC", "#66BB6A", "#FF7043", "#29B6F6"]
+        for i, (symbol, benchmark_points) in enumerate(benchmark_data.items()):
+            if not benchmark_points:
+                continue
+                
+            # Extract dates and values
+            bench_dates = [point["date"] for point in benchmark_points]
+            bench_pnl = [point["cumulative_pnl"] for point in benchmark_points]
+            
+            # Add benchmark P&L trace
+            fig.add_trace(
+                go.Scatter(
+                    x=bench_dates,
+                    y=bench_pnl,
+                    name=f"{symbol} P&L ($)",
+                    line=dict(color=benchmark_colors[i % len(benchmark_colors)], width=1.5, dash="dash"),
+                )
             )
-        )
+            
+            # Add benchmark percentage trace if available
+            if initial_capital and initial_capital > 0:
+                bench_percentage = [point["percentage_return"] for point in benchmark_points]
+                fig.add_trace(
+                    go.Scatter(
+                        x=bench_dates,
+                        y=bench_percentage,
+                        name=f"{symbol} Return (%)",
+                        line=dict(color=benchmark_colors[i % len(benchmark_colors)], width=1.5, dash="dot"),
+                        yaxis="y2",
+                    )
+                )
 
     # Update layout with dual y-axes if percentage is shown
     layout_updates = dict(
