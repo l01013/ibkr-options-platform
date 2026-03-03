@@ -27,6 +27,19 @@ class SellPutStrategy(BaseStrategy):
         premium = OptionsPricer.put_price(underlying_price, strike, T, iv)
         delta = OptionsPricer.delta(underlying_price, strike, T, iv, "P")
 
+        # Calculate position size based on available capital and risk management
+        # For cash secured put, need to reserve cash equal to strike * 100 per contract
+        max_contracts_by_capital = int(self.initial_capital * 0.8 / (strike * 100))  # Use 80% of capital
+        
+        # For risk-based sizing, use premium income as the measure
+        # We can risk a percentage of account value per trade based on potential premium income
+        expected_premium_income = premium * 100  # per contract premium income
+        max_contracts_by_risk = int((self.initial_capital * self.max_risk_per_trade) / expected_premium_income) if expected_premium_income > 0 else max_pos
+        
+        # Take minimum of capital-based sizing, risk-based sizing and max position constraint
+        max_contracts = min(max_pos, max_contracts_by_capital, max_contracts_by_risk)
+        quantity = max(1, max_contracts) * -1  # Sell contracts (negative quantity)
+
         dte_days = int(self.select_expiry_dte())
         entry = datetime.strptime(current_date, "%Y-%m-%d")
         expiry_date = entry + timedelta(days=dte_days)
@@ -38,7 +51,7 @@ class SellPutStrategy(BaseStrategy):
             right="P",
             strike=strike,
             expiry=expiry_str,
-            quantity=-1,
+            quantity=quantity,
             iv=iv,
             delta=delta,
             premium=premium,

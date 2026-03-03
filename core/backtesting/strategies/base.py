@@ -29,6 +29,8 @@ class BaseStrategy(ABC):
         self.delta_target = params.get("delta_target", 0.30)
         self.profit_target_pct = params.get("profit_target_pct", 50)
         self.stop_loss_pct = params.get("stop_loss_pct", 200)
+        self.initial_capital = params.get("initial_capital", 100000)
+        self.max_risk_per_trade = params.get("max_risk_per_trade", 0.02)  # 2% risk per trade
 
     @property
     @abstractmethod
