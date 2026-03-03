@@ -1,13 +1,13 @@
 services:
   ibgateway:
-    image: stoqex/ib-gateway-docker:latest
+    image: ghcr.io/ib-gateway/ib-gateway:latest
     restart: unless-stopped
     environment:
-      IB_USERNAME: ${IBKR_USERNAME}
-      IB_PASSWORD: ${IBKR_PASSWORD}
-      IB_TRADING_MODE: paper
-      IB_PORT: "4002"
-      IB_HOST: "0.0.0.0"
+      IBKR_USERNAME: ${IBKR_USERNAME}
+      IBKR_PASSWORD: ${IBKR_PASSWORD}
+      TRADING_MODE: paper
+      PORT: "4002"
+      BIND_ADDRESS: "0.0.0.0"
     ports:
       - "4002:4002"
     networks:
