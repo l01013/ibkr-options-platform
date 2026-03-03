@@ -1,25 +1,14 @@
 services:
-  ibgateway:
-    image: ghcr.io/ib-gateway/ib-gateway:latest
-    restart: unless-stopped
-    environment:
-      IBKR_USERNAME: ${IBKR_USERNAME}
-      IBKR_PASSWORD: ${IBKR_PASSWORD}
-      TRADING_MODE: paper
-      PORT: "4002"
-      BIND_ADDRESS: "0.0.0.0"
-    ports:
-      - "4002:4002"
-    networks:
-      - trading-net
-
+  # Note: IB Gateway container removed due to reliability issues
+  # Please run TWS/Gateway on host machine and connect from app container
+  
   app:
     build: .
     restart: unless-stopped
     ports:
       - "8050:8050"
     environment:
-      IBKR_HOST: ibgateway
+      IBKR_HOST: host.docker.internal
       IBKR_PORT: "4002"
       IBKR_CLIENT_ID: "1"
       IBKR_TRADING_MODE: ${IBKR_TRADING_MODE:-paper}
@@ -30,8 +19,9 @@ services:
       LOG_LEVEL: "INFO"
     volumes:
       - app-data:/app/data
-    depends_on:
-      - ibgateway
+    # Use host network mode to access TWS/Gateway on host machine
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - trading-net
 
