@@ -28,7 +28,7 @@ layout = html.Div([
 
                     # Display current account (read-only)
                     dbc.Label("Connected Account"),
-                    dbc.Input(id="set-account-display", type="text", placeholder="Not connected", readOnly=True, className="mb-3", disabled=True),
+                    dbc.Input(id="set-account-display", type="text", placeholder="Not connected", readonly=True, className="mb-3", disabled=True),
 
                     dbc.Label("Trading Mode"),
                     dbc.RadioItems(
