@@ -11,6 +11,7 @@ from core.backtesting.strategies.covered_call import CoveredCallStrategy
 from core.backtesting.strategies.iron_condor import IronCondorStrategy
 from core.backtesting.strategies.spreads import BullPutSpreadStrategy, BearCallSpreadStrategy
 from core.backtesting.strategies.straddle import StraddleStrategy, StrangleStrategy
+from core.backtesting.strategies.wheel import WheelStrategy
 from utils.logger import setup_logger
 
 logger = setup_logger("backtest_engine")
@@ -23,6 +24,7 @@ STRATEGY_MAP = {
     "bear_call_spread": BearCallSpreadStrategy,
     "straddle": StraddleStrategy,
     "strangle": StrangleStrategy,
+    "wheel": WheelStrategy,
 }
 
 
@@ -89,6 +91,9 @@ class BacktestEngine:
             )
             for trade in closed:
                 cumulative_pnl += trade.pnl
+                # Notify strategy of closed trade (for stateful strategies like Wheel)
+                if hasattr(strategy, 'on_trade_closed'):
+                    strategy.on_trade_closed(trade.to_dict())
 
             # Generate new signals (with cooldown)
             cooldown = int(strategy.dte_min * 0.8)
