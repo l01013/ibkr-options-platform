@@ -207,7 +207,8 @@ def run_backtest(
     # P&L chart
     pnl_dates = [p["date"] for p in daily_pnl] if daily_pnl else []
     pnl_values = [p["cumulative_pnl"] for p in daily_pnl] if daily_pnl else []
-    pnl_chart = dcc.Graph(figure=create_pnl_chart(pnl_dates, pnl_values))
+    initial_capital = params.get("initial_capital", 100000)
+    pnl_chart = dcc.Graph(figure=create_pnl_chart(pnl_dates, pnl_values, initial_capital=initial_capital))
 
     # Monthly heatmap
     monthly = metrics.get("monthly_returns", {})

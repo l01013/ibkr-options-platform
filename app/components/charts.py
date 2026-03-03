@@ -105,21 +105,35 @@ def create_pnl_chart(
     dates: list,
     pnl_values: list[float],
     benchmark_values: list[float] | None = None,
+    initial_capital: float | None = None,
     title: str = "P&L Curve",
 ) -> go.Figure:
-    """Create a P&L curve chart with optional benchmark comparison."""
+    """Create a P&L curve chart with optional benchmark comparison and percentage display."""
     fig = go.Figure()
 
-    fig.add_trace(
-        go.Scatter(
-            x=dates,
-            y=pnl_values,
-            name="Strategy",
-            line=dict(color="#26a69a", width=2),
-            fill="tozeroy",
-            fillcolor="rgba(38, 166, 154, 0.1)",
-        )
+    # Add P&L in dollars (primary trace)
+    strategy_trace = go.Scatter(
+        x=dates,
+        y=pnl_values,
+        name="Strategy P&L ($)",
+        line=dict(color="#26a69a", width=2),
+        fill="tozeroy",
+        fillcolor="rgba(38, 166, 154, 0.1)",
     )
+    
+    # Add percentage trace if initial capital is provided
+    if initial_capital and initial_capital > 0:
+        percentage_values = [pnl / initial_capital * 100 for pnl in pnl_values]
+        percentage_trace = go.Scatter(
+            x=dates,
+            y=percentage_values,
+            name="Strategy Return (%)",
+            line=dict(color="#42A5F5", width=2, dash="dot"),
+            yaxis="y2",
+        )
+        fig.add_trace(percentage_trace)
+    
+    fig.add_trace(strategy_trace)
 
     if benchmark_values:
         fig.add_trace(
@@ -131,7 +145,8 @@ def create_pnl_chart(
             )
         )
 
-    fig.update_layout(
+    # Update layout with dual y-axes if percentage is shown
+    layout_updates = dict(
         title=title,
         template="plotly_dark",
         height=400,
@@ -140,6 +155,17 @@ def create_pnl_chart(
         xaxis_title="Date",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
+    
+    # Add second y-axis for percentage if needed
+    if initial_capital and initial_capital > 0:
+        layout_updates["yaxis2"] = dict(
+            title="Return (%)",
+            overlaying="y",
+            side="right",
+            gridcolor="rgba(255,255,255,0.1)",
+        )
+    
+    fig.update_layout(**layout_updates)
     return fig
 
 
