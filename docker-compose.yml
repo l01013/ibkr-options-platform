@@ -1,15 +1,28 @@
 services:
-  # IB Gateway container disabled due to persistent port binding issues
-  # Use local TWS/Gateway instead
-  
+  ibgateway:
+    image: ghcr.io/extrange/ibkr:stable
+    ports:
+      - "127.0.0.1:6080:6080"  # noVNC browser access
+      - "127.0.0.1:8888:8888"  # API access (auto-forwards 4002)
+    ulimits:
+      nofile: 10000
+    environment:
+      USERNAME: ${IBKR_USERNAME}
+      PASSWORD: '${IBKR_PASSWORD}'
+      GATEWAY_OR_TWS: gateway
+      IBC_TradingMode: paper
+      IBC_ReadOnlyApi: 'no'
+    networks:
+      - trading-net
+
   app:
     build: .
     restart: unless-stopped
     ports:
       - "8050:8050"
     environment:
-      IBKR_HOST: host.docker.internal
-      IBKR_PORT: "4002"
+      IBKR_HOST: ibgateway
+      IBKR_PORT: "8888"
       IBKR_CLIENT_ID: "1"
       IBKR_TRADING_MODE: ${IBKR_TRADING_MODE:-paper}
       APP_HOST: "0.0.0.0"
@@ -19,8 +32,8 @@ services:
       LOG_LEVEL: "INFO"
     volumes:
       - app-data:/app/data
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    depends_on:
+      - ibgateway
     networks:
       - trading-net
 
