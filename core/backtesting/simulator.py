@@ -48,6 +48,14 @@ class TradeRecord:
     capital_at_exit: float = 0.0       # Total capital when closing position
 
     def to_dict(self) -> dict:
+        # Generate formatted option contract name: e.g., "AAPL 240115 150 Put"
+        try:
+            expiry_short = self.expiry[2:] if len(self.expiry) >= 6 else self.expiry
+            option_type = "Put" if self.right == "P" else "Call"
+            contract_name = f"{self.symbol} {expiry_short} {self.strike:.0f} {option_type}"
+        except:
+            contract_name = f"{self.symbol} {self.expiry} {self.strike} {self.right}"
+        
         return {
             "symbol": self.symbol,
             "trade_type": self.trade_type,
@@ -56,9 +64,10 @@ class TradeRecord:
             "expiry": self.expiry,
             "strike": self.strike,
             "right": self.right,
+            "quantity": self.quantity,
+            "contract_name": contract_name,  # Formatted option contract name
             "entry_price": round(self.entry_price, 2),
             "exit_price": round(self.exit_price, 2),
-            "quantity": self.quantity,
             "pnl": round(self.pnl, 2),
             "pnl_pct": round(self.pnl_pct, 1),
             "exit_reason": self.exit_reason,

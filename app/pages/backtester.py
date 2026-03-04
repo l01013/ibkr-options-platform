@@ -281,8 +281,7 @@ def run_backtest(
     trade_columns = [
         {"headerName": "Entry", "field": "entry_date", "width": 100},
         {"headerName": "Exit", "field": "exit_date", "width": 100},
-        {"headerName": "Option Contract", "field": "contract_name", "width": 180,
-         "valueFormatter": {"function": "params.value || (params.data.symbol + ' ' + params.data.expiry.substring(2) + ' ' + params.data.strike.toFixed(0) + ' ' + (params.data.right === 'P' ? 'Put' : 'Call'))"}},
+        {"headerName": "Option Contract", "field": "contract_name", "width": 180},
         {"headerName": "Type", "field": "trade_type", "width": 120},
         {"headerName": "Strike", "field": "strike", "width": 80,
          "valueFormatter": {"function": "d3.format(',.2f')(params.value)"}},
