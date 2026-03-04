@@ -7,8 +7,8 @@ services:
     ulimits:
       nofile: 10000
     environment:
-      USERNAME: ${IBKR_USERNAME}
-      PASSWORD: '${IBKR_PASSWORD}'
+      USERNAME: ${USERNAME}
+      PASSWORD: '${PASSWORD}'
       GATEWAY_OR_TWS: gateway
       IBC_TradingMode: paper
       IBC_ReadOnlyApi: 'no'
