@@ -210,6 +210,9 @@ class WheelStrategy(BaseStrategy):
             max_contracts = max(1, min(max_contracts, self.params.get("max_positions", 1)))
         
         quantity = -max_contracts  # Sell
+        
+        # Explicitly set margin requirement for cash-secured put
+        margin_per_contract = strike * 100
 
         return [Signal(
             symbol=self.params["symbol"],
@@ -221,6 +224,7 @@ class WheelStrategy(BaseStrategy):
             iv=iv,
             delta=delta,
             premium=premium,
+            margin_requirement=margin_per_contract,  # Cash-secured put requires strike × 100
         )]
 
     def _generate_covered_call_signal(
@@ -248,23 +252,15 @@ class WheelStrategy(BaseStrategy):
         delta = OptionsPricer.delta(underlying_price, strike, T, iv, "C")
 
         # Covered call: 1 contract per 100 shares owned
-        max_contracts_by_shares = self.stock_holding.shares // 100
-        
-        # Also check capital constraints if position_mgr available
-        if position_mgr:
-            # For covered call, need to verify we have enough capital for shares
-            max_contracts_by_capital = position_mgr.calculate_position_size(
-                margin_per_contract=underlying_price * 100,
-                max_positions=self.params.get("max_positions", 1),
-            )
-            # Take minimum of shares-based and capital-based sizing
-            max_contracts = min(max_contracts_by_shares, max_contracts_by_capital)
-            max_contracts = max(1, min(max_contracts, self.params.get("max_positions", 1)))
-        else:
-            max_contracts = max_contracts_by_shares
-            max_contracts = max(1, min(max_contracts, self.params.get("max_positions", 1)))
+        # No additional capital constraint needed - we already own the shares!
+        max_contracts = self.stock_holding.shares // 100
+        max_contracts = max(1, min(max_contracts, self.params.get("max_positions", 1)))
         
         quantity = -max_contracts  # Sell
+        
+        # No additional margin required - shares are already owned
+        # The margin was allocated in the Sell Put phase when we bought the shares
+        margin_requirement = 0.0
 
         return [Signal(
             symbol=self.params["symbol"],
@@ -276,6 +272,7 @@ class WheelStrategy(BaseStrategy):
             iv=iv,
             delta=delta,
             premium=premium,
+            margin_requirement=margin_requirement,  # No additional margin needed for covered call
         )]
 
     def _record_trade(self, trade: dict):
