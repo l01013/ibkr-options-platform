@@ -140,37 +140,66 @@ def create_pnl_chart(
 
     # Add multiple benchmarks if provided
     if benchmark_data:
-        benchmark_colors = ["#FFA726", "#AB47BC", "#66BB6A", "#FF7043", "#29B6F6"]
-        for i, (symbol, benchmark_points) in enumerate(benchmark_data.items()):
-            if not benchmark_points:
+        benchmark_colors = ["#FFA726", "#AB47BC", "#66BB6A", "#FF7043", "#29B6F6", "#FFD54F", "#BA68C8"]
+        benchmark_idx = 0
+        
+        for symbol, benchmark_points in benchmark_data.items():
+            if not benchmark_points or len(benchmark_points) == 0:
+                logger.warning(f"No data points for benchmark {symbol}")
                 continue
+            
+            # Validate data structure
+            try:
+                # Extract dates and values
+                bench_dates = []
+                bench_pnl = []
+                bench_percentage = []
                 
-            # Extract dates and values
-            bench_dates = [point["date"] for point in benchmark_points]
-            bench_pnl = [point["cumulative_pnl"] for point in benchmark_points]
-            
-            # Add benchmark P&L trace
-            fig.add_trace(
-                go.Scatter(
-                    x=bench_dates,
-                    y=bench_pnl,
-                    name=f"{symbol} P&L ($)",
-                    line=dict(color=benchmark_colors[i % len(benchmark_colors)], width=1.5, dash="dash"),
-                )
-            )
-            
-            # Add benchmark percentage trace if available
-            if initial_capital and initial_capital > 0:
-                bench_percentage = [point["percentage_return"] for point in benchmark_points]
+                for point in benchmark_points:
+                    if "date" not in point or "cumulative_pnl" not in point:
+                        logger.warning(f"Invalid benchmark data point for {symbol}: missing required fields")
+                        continue
+                    bench_dates.append(point["date"])
+                    bench_pnl.append(point.get("cumulative_pnl", 0))
+                    if "percentage_return" in point:
+                        bench_percentage.append(point["percentage_return"])
+                
+                if not bench_dates:
+                    logger.warning(f"No valid data points for benchmark {symbol}")
+                    continue
+                
+                color = benchmark_colors[benchmark_idx % len(benchmark_colors)]
+                
+                # Add benchmark P&L trace
                 fig.add_trace(
                     go.Scatter(
                         x=bench_dates,
-                        y=bench_percentage,
-                        name=f"{symbol} Return (%)",
-                        line=dict(color=benchmark_colors[i % len(benchmark_colors)], width=1.5, dash="dot"),
-                        yaxis="y2",
+                        y=bench_pnl,
+                        name=f"{symbol} P&L ($)",
+                        line=dict(color=color, width=2, dash="dash"),
+                        mode="lines",
                     )
                 )
+                
+                # Add benchmark percentage trace if available
+                if initial_capital and initial_capital > 0 and bench_percentage:
+                    fig.add_trace(
+                        go.Scatter(
+                            x=bench_dates,
+                            y=bench_percentage,
+                            name=f"{symbol} Return (%)",
+                            line=dict(color=color, width=2, dash="dot"),
+                            yaxis="y2",
+                            mode="lines",
+                        )
+                    )
+                
+                benchmark_idx += 1
+                logger.info(f"Added benchmark curve for {symbol}: {len(bench_dates)} data points")
+                
+            except Exception as e:
+                logger.error(f"Error adding benchmark curve for {symbol}: {e}")
+                continue
 
     # Update layout with dual y-axes if percentage is shown
     layout_updates = dict(
