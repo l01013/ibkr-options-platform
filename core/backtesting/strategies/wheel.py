@@ -202,12 +202,16 @@ class WheelStrategy(BaseStrategy):
                 margin_per_contract=strike * 100,
                 max_positions=self.params.get("max_positions", 1),
             )
+            if max_contracts <= 0:
+                return []  # No signal if insufficient capital
         else:
             # Fallback to legacy calculation
             available_capital = self.initial_capital * self.position_percentage
             leveraged_capital = available_capital * self.max_leverage
             max_contracts = int(leveraged_capital / (strike * 100))
-            max_contracts = max(1, min(max_contracts, self.params.get("max_positions", 1)))
+            max_contracts = min(max_contracts, self.params.get("max_positions", 1))
+            if max_contracts <= 0:
+                return []  # No signal if insufficient capital
         
         quantity = -max_contracts  # Sell
         
@@ -254,7 +258,11 @@ class WheelStrategy(BaseStrategy):
         # Covered call: 1 contract per 100 shares owned
         # No additional capital constraint needed - we already own the shares!
         max_contracts = self.stock_holding.shares // 100
-        max_contracts = max(1, min(max_contracts, self.params.get("max_positions", 1)))
+        max_contracts = min(max_contracts, self.params.get("max_positions", 1))
+        
+        # Return empty if no shares to cover
+        if max_contracts <= 0:
+            return []
         
         quantity = -max_contracts  # Sell
         

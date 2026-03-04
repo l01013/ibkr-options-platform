@@ -48,8 +48,10 @@ class BullPutSpreadStrategy(BaseStrategy):
             
             num_spreads = position_mgr.calculate_position_size(
                 margin_per_contract=estimated_margin_per_spread,
-                max_positions=min(max_pos, 10),  # Cap at 10 spreads
+                max_positions=min(max_pos, 10),
             )
+            if num_spreads <= 0:
+                return []  # No signal if insufficient capital
         else:
             # Fallback to legacy calculation
             available_capital = self.initial_capital * self.position_percentage
@@ -61,7 +63,8 @@ class BullPutSpreadStrategy(BaseStrategy):
             
             max_spreads_by_capital = int(leveraged_capital / estimated_margin_per_spread)
             num_spreads = min(max_pos, max_spreads_by_capital, 10)
-            num_spreads = max(1, num_spreads)
+            if num_spreads <= 0:
+                return []  # No signal if insufficient capital
         
         quantity = num_spreads
         

@@ -98,7 +98,7 @@ class PositionManager:
             max_positions: Maximum number of contracts allowed
             
         Returns:
-            Number of contracts that can be opened
+            Number of contracts that can be opened (0 if insufficient capital)
         """
         if margin_per_contract <= 0:
             return 0
@@ -114,7 +114,18 @@ class PositionManager:
         # Take minimum of all constraints
         num_contracts = min(max_positions, max_by_margin, max_by_capital)
         
-        return max(1, num_contracts)
+        # Return 0 if insufficient capital (no forced position sizing)
+        # This ensures realistic backtest results - can't trade with no money!
+        if num_contracts <= 0:
+            logger.debug(
+                f"Insufficient capital for position: "
+                f"available_margin={self.available_margin:.2f}, "
+                f"margin_per_contract={margin_per_contract:.2f}, "
+                f"max_by_margin={max_by_margin}, max_by_capital={max_by_capital}"
+            )
+            return 0
+        
+        return num_contracts
     
     def allocate_margin(
         self,

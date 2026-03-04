@@ -40,6 +40,8 @@ class CoveredCallStrategy(BaseStrategy):
                 margin_per_contract=underlying_price * 100,
                 max_positions=min(max_pos, 10),
             )
+            if max_contracts <= 0:
+                return []  # No signal if can't afford
         else:
             # Fallback to legacy calculation
             available_capital = self.initial_capital * self.position_percentage
@@ -47,7 +49,8 @@ class CoveredCallStrategy(BaseStrategy):
             
             max_contracts_by_capital = int(leveraged_capital / (underlying_price * 100))
             max_contracts = min(max_pos, max_contracts_by_capital, 10)
-            max_contracts = max(1, max_contracts)
+            if max_contracts <= 0:
+                return []  # No signal if insufficient capital
         
         quantity = -max_contracts  # Sell calls (negative quantity)
         

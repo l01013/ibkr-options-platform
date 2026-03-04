@@ -36,6 +36,9 @@ class SellPutStrategy(BaseStrategy):
                 margin_per_contract=margin_per_contract,
                 max_positions=max_pos,
             )
+            # Return empty if insufficient capital
+            if num_contracts <= 0:
+                return []
         else:
             # Fallback to legacy calculation (backward compatibility)
             available_capital = self.initial_capital * self.position_percentage
@@ -48,7 +51,11 @@ class SellPutStrategy(BaseStrategy):
             max_contracts_by_risk = int((self.initial_capital * self.max_risk_per_trade) / expected_premium_income) if expected_premium_income > 0 else max_pos
             
             num_contracts = min(max_pos, max_contracts_by_capital, max_contracts_by_risk)
-            num_contracts = max(1, num_contracts)
+            
+            # Return 0 if insufficient capital (no forced position sizing)
+            # This ensures realistic backtest results
+            if num_contracts <= 0:
+                return []
         
         quantity = -num_contracts  # Sell contracts (negative quantity)
 
