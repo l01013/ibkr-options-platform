@@ -12,6 +12,7 @@ from core.backtesting.strategies.iron_condor import IronCondorStrategy
 from core.backtesting.strategies.spreads import BullPutSpreadStrategy, BearCallSpreadStrategy
 from core.backtesting.strategies.straddle import StraddleStrategy, StrangleStrategy
 from core.backtesting.strategies.wheel import WheelStrategy
+from core.backtesting.position_manager import PositionManager
 from utils.logger import setup_logger
 
 logger = setup_logger("backtest_engine")
@@ -62,15 +63,18 @@ class BacktestEngine:
         prices = [b["close"] for b in bars]
         hv = self._rolling_hv(prices, window=20)
 
+        # Initialize position manager for capital allocation and margin tracking
+        position_mgr = PositionManager(
+            initial_capital=initial_capital,
+            max_leverage=params.get("max_leverage", 1.0),
+            position_percentage=params.get("position_percentage", 0.10),
+            margin_interest_rate=0.05,
+        )
+        
         # Run simulation
         simulator = TradeSimulator()
         daily_pnl = []
-        cumulative_pnl = 0.0
         last_entry_idx = -999  # Track cooldown between entries
-        
-        # Initialize margin interest tracking
-        margin_interest_rate_daily = 0.05 / 365  # 5% annual rate divided by 365 days
-        borrowed_funds = 0.0  # Track borrowed funds for leverage
 
         for i, bar in enumerate(bars):
             bar_date = bar["date"][:10]  # YYYY-MM-DD
@@ -80,7 +84,7 @@ class BacktestEngine:
             if iv <= 0.01:
                 iv = 0.3  # fallback
 
-            # Check exits
+            # Check exits and release margin
             closed = simulator.check_exits(
                 bar_date,
                 underlying_price,
@@ -90,7 +94,10 @@ class BacktestEngine:
                 min_dte=0,
             )
             for trade in closed:
-                cumulative_pnl += trade.pnl
+                # Create position ID and release margin
+                position_id = f"{trade.symbol}_{trade.entry_date}_{trade.strike}_{trade.right}"
+                position_mgr.release_margin(position_id, trade.pnl)
+                
                 # Notify strategy of closed trade (for stateful strategies like Wheel)
                 if hasattr(strategy, 'on_trade_closed'):
                     strategy.on_trade_closed(trade.to_dict())
@@ -98,34 +105,62 @@ class BacktestEngine:
             # Generate new signals (with cooldown)
             cooldown = int(strategy.dte_min * 0.8)
             if i - last_entry_idx >= cooldown:
+                # Pass position manager to strategy for capital-aware signal generation
                 signals = strategy.generate_signals(
-                    bar_date, underlying_price, iv, simulator.open_positions
+                    bar_date, underlying_price, iv, simulator.open_positions,
+                    position_mgr=position_mgr
                 )
                 for sig in signals:
-                    pos = OptionPosition(
+                    # Calculate required margin for this position
+                    if "PUT" in sig.trade_type:
+                        # Cash-secured put: reserve strike * 100 per contract
+                        margin_per_contract = sig.strike * 100
+                    elif "CALL" in sig.trade_type and "COVERED" not in sig.trade_type:
+                        # Naked call: reserve underlying value * 100 per contract
+                        margin_per_contract = underlying_price * 100
+                    else:
+                        # Covered calls or spreads: use premium as reference
+                        margin_per_contract = sig.premium * 100 * 10  # Simplified estimate
+                    
+                    total_margin = abs(sig.quantity) * margin_per_contract
+                    
+                    # Allocate margin before opening position
+                    position_id = f"{sig.symbol}_{bar_date}_{sig.strike}_{sig.right}"
+                    if position_mgr.allocate_margin(
+                        position_id=position_id,
+                        strategy=strategy.name,
                         symbol=sig.symbol,
                         entry_date=bar_date,
-                        expiry=sig.expiry,
-                        strike=sig.strike,
-                        right=sig.right,
-                        trade_type=sig.trade_type,
-                        quantity=sig.quantity,
-                        entry_price=sig.premium,
-                        underlying_entry=underlying_price,
-                        iv_at_entry=sig.iv,
-                        delta_at_entry=sig.delta,
-                    )
-                    simulator.open_position(pos)
-                    last_entry_idx = i
+                        margin_amount=total_margin,
+                    ):
+                        # Margin allocated successfully, open position
+                        pos = OptionPosition(
+                            symbol=sig.symbol,
+                            entry_date=bar_date,
+                            expiry=sig.expiry,
+                            strike=sig.strike,
+                            right=sig.right,
+                            trade_type=sig.trade_type,
+                            quantity=sig.quantity,
+                            entry_price=sig.premium,
+                            underlying_entry=underlying_price,
+                            iv_at_entry=sig.iv,
+                            delta_at_entry=sig.delta,
+                        )
+                        simulator.open_position(pos)
+                        last_entry_idx = i
+                    else:
+                        logger.warning(
+                            f"Insufficient margin for {sig.symbol} {sig.trade_type}: "
+                            f"required {total_margin:.2f}, available {position_mgr.available_margin:.2f}"
+                        )
 
-            # Apply daily margin interest if leverage is used
-            if borrowed_funds > 0:
-                daily_interest = borrowed_funds * margin_interest_rate_daily
-                cumulative_pnl -= daily_interest  # Subtract interest from P&L
+            # Apply daily margin interest on borrowed funds
+            daily_interest = position_mgr.apply_daily_interest()
             
             # Daily mark-to-market
             open_pnl = simulator.get_total_open_pnl()
-            portfolio_value = initial_capital + cumulative_pnl + open_pnl
+            portfolio_value = position_mgr.net_capital + open_pnl
             
             # Update strategy daily stats if it supports monitoring
             if hasattr(strategy, 'update_daily_stats'):
@@ -133,11 +168,13 @@ class BacktestEngine:
             
             daily_pnl.append({
                 "date": bar_date,
-                "cumulative_pnl": cumulative_pnl + open_pnl,
-                "closed_pnl": cumulative_pnl,
+                "cumulative_pnl": position_mgr.cumulative_pnl + open_pnl,
+                "closed_pnl": position_mgr.cumulative_pnl,
                 "open_pnl": open_pnl,
                 "portfolio_value": portfolio_value,
-                "margin_interest": daily_interest if borrowed_funds > 0 else 0,
+                "margin_interest": daily_interest,
+                "margin_used": position_mgr.total_margin_used,
+                "available_margin": position_mgr.available_margin,
             })
 
         # Force close remaining positions at end

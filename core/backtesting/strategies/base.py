@@ -47,8 +47,20 @@ class BaseStrategy(ABC):
         underlying_price: float,
         iv: float,
         open_positions: list,
+        position_mgr: Any = None,  # Optional PositionManager for capital-aware sizing
     ) -> list[Signal]:
-        """Generate trading signals for the current date."""
+        """Generate trading signals for the current date.
+        
+        Args:
+            current_date: Current trading date
+            underlying_price: Current underlying price
+            iv: Implied volatility
+            open_positions: List of currently open positions
+            position_mgr: Optional PositionManager instance for margin tracking
+            
+        Returns:
+            List of Signal objects
+        """
         ...
 
     def select_strike(

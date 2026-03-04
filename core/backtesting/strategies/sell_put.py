@@ -17,6 +17,7 @@ class SellPutStrategy(BaseStrategy):
         underlying_price: float,
         iv: float,
         open_positions: list,
+        position_mgr=None,
     ) -> list[Signal]:
         max_pos = self.params.get("max_positions", 1)
         if len(open_positions) >= max_pos:
@@ -27,21 +28,29 @@ class SellPutStrategy(BaseStrategy):
         premium = OptionsPricer.put_price(underlying_price, strike, T, iv)
         delta = OptionsPricer.delta(underlying_price, strike, T, iv, "P")
 
-        # Calculate position size based on available capital, position percentage and leverage
-        # For cash secured put, need to reserve cash equal to strike * 100 per contract
-        available_capital = self.initial_capital * self.position_percentage
-        leveraged_capital = available_capital * self.max_leverage
+        # Calculate position size using position manager if available
+        if position_mgr:
+            # Use position manager for capital-aware sizing
+            margin_per_contract = strike * 100  # Cash-secured put requirement
+            num_contracts = position_mgr.calculate_position_size(
+                margin_per_contract=margin_per_contract,
+                max_positions=max_pos,
+            )
+        else:
+            # Fallback to legacy calculation (backward compatibility)
+            available_capital = self.initial_capital * self.position_percentage
+            leveraged_capital = available_capital * self.max_leverage
+            
+            max_contracts_by_capital = int(leveraged_capital / (strike * 100))
+            
+            # For risk-based sizing, use premium income as the measure
+            expected_premium_income = premium * 100
+            max_contracts_by_risk = int((self.initial_capital * self.max_risk_per_trade) / expected_premium_income) if expected_premium_income > 0 else max_pos
+            
+            num_contracts = min(max_pos, max_contracts_by_capital, max_contracts_by_risk)
+            num_contracts = max(1, num_contracts)
         
-        max_contracts_by_capital = int(leveraged_capital / (strike * 100))
-        
-        # For risk-based sizing, use premium income as the measure
-        # We can risk a percentage of account value per trade based on potential premium income
-        expected_premium_income = premium * 100  # per contract premium income
-        max_contracts_by_risk = int((self.initial_capital * self.max_risk_per_trade) / expected_premium_income) if expected_premium_income > 0 else max_pos
-        
-        # Take minimum of capital-based sizing, risk-based sizing and max position constraint
-        max_contracts = min(max_pos, max_contracts_by_capital, max_contracts_by_risk)
-        quantity = max(1, max_contracts) * -1  # Sell contracts (negative quantity)
+        quantity = -num_contracts  # Sell contracts (negative quantity)
 
         dte_days = int(self.select_expiry_dte())
         entry = datetime.strptime(current_date, "%Y-%m-%d")

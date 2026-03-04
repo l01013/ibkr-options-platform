@@ -17,6 +17,7 @@ class CoveredCallStrategy(BaseStrategy):
         underlying_price: float,
         iv: float,
         open_positions: list,
+        position_mgr=None,
     ) -> list[Signal]:
         max_pos = self.params.get("max_positions", 1)
         if len(open_positions) >= max_pos:
@@ -32,16 +33,23 @@ class CoveredCallStrategy(BaseStrategy):
         expiry_date = entry + timedelta(days=dte_days)
         expiry_str = expiry_date.strftime("%Y%m%d")
 
-        # Calculate position size based on available capital, position percentage and leverage
-        available_capital = self.initial_capital * self.position_percentage
-        leveraged_capital = available_capital * self.max_leverage
+        # Calculate position size using position manager if available
+        if position_mgr:
+            # For covered call, need to own 100 shares per contract
+            max_contracts = position_mgr.calculate_position_size(
+                margin_per_contract=underlying_price * 100,
+                max_positions=min(max_pos, 10),
+            )
+        else:
+            # Fallback to legacy calculation
+            available_capital = self.initial_capital * self.position_percentage
+            leveraged_capital = available_capital * self.max_leverage
+            
+            max_contracts_by_capital = int(leveraged_capital / (underlying_price * 100))
+            max_contracts = min(max_pos, max_contracts_by_capital, 10)
+            max_contracts = max(1, max_contracts)
         
-        # For covered call, we need to own 100 shares per contract
-        max_contracts_by_capital = int(leveraged_capital / (underlying_price * 100))
-        
-        # Limit position size to a reasonable number
-        max_contracts = min(max_pos, max_contracts_by_capital, 10)  # Cap at 10 contracts
-        quantity = max(1, max_contracts) * -1  # Sell calls (negative quantity)
+        quantity = -max_contracts  # Sell calls (negative quantity)
         
         return [Signal(
             symbol=self.params["symbol"],
