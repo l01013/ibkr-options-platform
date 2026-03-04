@@ -98,6 +98,9 @@ class BacktestEngine:
                 position_id = f"{trade.symbol}_{trade.entry_date}_{trade.strike}_{trade.right}"
                 position_mgr.release_margin(position_id, trade.pnl)
                 
+                # Update trade record with capital information at exit
+                trade.capital_at_exit = position_mgr.net_capital  # Record total capital after closing
+                
                 # Notify strategy of closed trade (for stateful strategies like Wheel)
                 if hasattr(strategy, 'on_trade_closed'):
                     strategy.on_trade_closed(trade.to_dict())
@@ -146,6 +149,7 @@ class BacktestEngine:
                             underlying_entry=underlying_price,
                             iv_at_entry=sig.iv,
                             delta_at_entry=sig.delta,
+                            capital_at_entry=position_mgr.net_capital,  # Record total capital at entry
                         )
                         simulator.open_position(pos)
                         last_entry_idx = i

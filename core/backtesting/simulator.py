@@ -21,6 +21,7 @@ class OptionPosition:
     delta_at_entry: float
     current_price: float = 0.0
     current_pnl: float = 0.0
+    capital_at_entry: float = 0.0  # Total portfolio capital when opening position
 
 
 @dataclass
@@ -42,6 +43,8 @@ class TradeRecord:
     underlying_exit: float
     iv_at_entry: float
     delta_at_entry: float
+    capital_at_entry: float = 0.0      # Total capital when opening position
+    capital_at_exit: float = 0.0       # Total capital when closing position
 
     def to_dict(self) -> dict:
         return {
@@ -61,6 +64,8 @@ class TradeRecord:
             "underlying_exit": round(self.underlying_exit, 2),
             "iv_at_entry": round(self.iv_at_entry, 4),
             "delta_at_entry": round(self.delta_at_entry, 3),
+            "capital_at_entry": round(self.capital_at_entry, 2),
+            "capital_at_exit": round(self.capital_at_exit, 2),
         }
 
 
@@ -165,6 +170,8 @@ class TradeSimulator:
                     underlying_exit=underlying_price,
                     iv_at_entry=pos.iv_at_entry,
                     delta_at_entry=pos.delta_at_entry,
+                    capital_at_entry=getattr(pos, 'capital_at_entry', 0.0),  # Pass from position
+                    capital_at_exit=0.0,  # Will be set by engine after margin release
                 )
                 closed.append(trade)
                 self.closed_trades.append(trade)

@@ -54,3 +54,5 @@ class BacktestTrade(Base):
     underlying_exit = Column(Float)        # stock price at exit
     iv_at_entry = Column(Float)
     delta_at_entry = Column(Float)
+    capital_at_entry = Column(Float)       # total portfolio capital when opening position
+    capital_at_exit = Column(Float)        # total portfolio capital when closing position
