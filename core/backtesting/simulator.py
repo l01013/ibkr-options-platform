@@ -33,6 +33,7 @@ class TradeRecord:
     exit_date: str
     expiry: str
     strike: float
+    right: str  # P (Put) or C (Call)
     entry_price: float
     exit_price: float
     quantity: int
@@ -54,6 +55,7 @@ class TradeRecord:
             "exit_date": self.exit_date,
             "expiry": self.expiry,
             "strike": self.strike,
+            "right": self.right,
             "entry_price": round(self.entry_price, 2),
             "exit_price": round(self.exit_price, 2),
             "quantity": self.quantity,
@@ -160,6 +162,7 @@ class TradeSimulator:
                     exit_date=current_date,
                     expiry=pos.expiry,
                     strike=pos.strike,
+                    right=pos.right,
                     entry_price=pos.entry_price,
                     exit_price=exit_price,
                     quantity=pos.quantity,

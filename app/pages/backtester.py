@@ -281,10 +281,14 @@ def run_backtest(
     trade_columns = [
         {"headerName": "Entry", "field": "entry_date", "width": 100},
         {"headerName": "Exit", "field": "exit_date", "width": 100},
+        {"headerName": "Option Contract", "field": "contract_name", "width": 180,
+         "valueFormatter": {"function": "params.value || (params.data.symbol + ' ' + params.data.expiry.substring(2) + ' ' + params.data.strike.toFixed(0) + ' ' + (params.data.right === 'P' ? 'Put' : 'Call'))"}},
         {"headerName": "Type", "field": "trade_type", "width": 120},
         {"headerName": "Strike", "field": "strike", "width": 80,
          "valueFormatter": {"function": "d3.format(',.2f')(params.value)"}},
         {"headerName": "Expiry", "field": "expiry", "width": 100},
+        {"headerName": "Right", "field": "right", "width": 80},
+        {"headerName": "Qty", "field": "quantity", "width": 60},
         {"headerName": "Entry $", "field": "entry_price", "width": 90,
          "valueFormatter": {"function": "d3.format(',.2f')(params.value)"}},
         {"headerName": "Exit $", "field": "exit_price", "width": 90,
@@ -294,7 +298,7 @@ def run_backtest(
          "cellStyle": {"function": "params.value >= 0 ? {'color': '#26a69a'} : {'color': '#ef5350'}"}},
         {"headerName": "Reason", "field": "exit_reason", "width": 120},
     ]
-    trades_table = create_data_table(trades, trade_columns, "bt-trades-table", height=300) if trades else html.P("No trades", className="text-muted")
+    trades_table = create_data_table(trades, trade_columns, "bt-trades-table", height=450) if trades else html.P("No trades", className="text-muted")
 
     # Additional metrics
     extra_row = dbc.Row([

@@ -311,9 +311,13 @@ class WheelStrategy(BaseStrategy):
             "trade_id": len(self.trade_history) + 1,
             "date": trade.get("exit_date", datetime.now().strftime("%Y-%m-%d")),
             "type": trade.get("trade_type", "UNKNOWN"),
+            "symbol": trade.get("symbol", "N/A"),
+            "expiry": trade.get("expiry", "N/A"),
+            "strike": trade.get("strike", 0),
+            "right": trade.get("right", "N/A"),  # P (Put) or C (Call)
+            "quantity": trade.get("quantity", 0),
             "exit_reason": trade.get("exit_reason", "UNKNOWN"),
             "pnl": round(pnl, 2),
-            "strike": trade.get("strike", 0),
             "phase": self.phase,
             "cumulative_pnl": round(self.performance_metrics.total_pnl, 2),
         }
