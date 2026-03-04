@@ -66,13 +66,21 @@ class BullPutSpreadStrategy(BaseStrategy):
         quantity = num_spreads
         
         symbol = self.params["symbol"]
+        
+        # Calculate margin requirement for this spread
+        net_credit = short_premium - long_premium
+        margin_per_spread = (self.spread_width * 100) - (net_credit * 100)
+        margin_per_spread = max(margin_per_spread, 100)  # Minimum $100
+        
         return [
             Signal(symbol=symbol, trade_type="BULL_PUT_SHORT", right="P",
                    strike=short_strike, expiry=expiry_str, quantity=-quantity,
-                   iv=iv, delta=short_delta, premium=short_premium),
+                   iv=iv, delta=short_delta, premium=short_premium,
+                   margin_requirement=margin_per_spread),  # Margin for the spread
             Signal(symbol=symbol, trade_type="BULL_PUT_LONG", right="P",
                    strike=long_strike, expiry=expiry_str, quantity=quantity,
-                   iv=iv, delta=0, premium=long_premium),
+                   iv=iv, delta=0, premium=long_premium,
+                   margin_requirement=0),  # Long leg is hedged, no margin needed
         ]
 
 
@@ -140,8 +148,10 @@ class BearCallSpreadStrategy(BaseStrategy):
         return [
             Signal(symbol=symbol, trade_type="BEAR_CALL_SHORT", right="C",
                    strike=short_strike, expiry=expiry_str, quantity=-quantity,
-                   iv=iv, delta=short_delta, premium=short_premium),
+                   iv=iv, delta=short_delta, premium=short_premium,
+                   margin_requirement=margin_per_spread),  # Margin for the spread
             Signal(symbol=symbol, trade_type="BEAR_CALL_LONG", right="C",
                    strike=long_strike, expiry=expiry_str, quantity=quantity,
-                   iv=iv, delta=0, premium=long_premium),
+                   iv=iv, delta=0, premium=long_premium,
+                   margin_requirement=0),  # Long leg is hedged, no margin needed
         ]

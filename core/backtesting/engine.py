@@ -114,16 +114,25 @@ class BacktestEngine:
                     position_mgr=position_mgr
                 )
                 for sig in signals:
-                    # Calculate required margin for this position
-                    if "PUT" in sig.trade_type:
-                        # Cash-secured put: reserve strike * 100 per contract
-                        margin_per_contract = sig.strike * 100
-                    elif "CALL" in sig.trade_type and "COVERED" not in sig.trade_type:
-                        # Naked call: reserve underlying value * 100 per contract
-                        margin_per_contract = underlying_price * 100
+                    # Use strategy-provided margin requirement if available
+                    if sig.margin_requirement is not None and sig.margin_requirement > 0:
+                        # Strategy has provided specific margin requirement (e.g., spreads, straddles)
+                        margin_per_contract = sig.margin_requirement
+                        logger.debug(
+                            f"Using strategy-provided margin for {sig.trade_type}: "
+                            f"${margin_per_contract:.2f}"
+                        )
                     else:
-                        # Covered calls or spreads: use premium as reference
-                        margin_per_contract = sig.premium * 100 * 10  # Simplified estimate
+                        # Fallback to legacy calculation for simple strategies
+                        if "PUT" in sig.trade_type:
+                            # Cash-secured put or naked put
+                            margin_per_contract = sig.strike * 100
+                        elif "CALL" in sig.trade_type and "COVERED" not in sig.trade_type:
+                            # Naked call
+                            margin_per_contract = underlying_price * 100
+                        else:
+                            # Covered calls or other: use premium as reference
+                            margin_per_contract = sig.premium * 100 * 10
                     
                     total_margin = abs(sig.quantity) * margin_per_contract
                     

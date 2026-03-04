@@ -86,18 +86,37 @@ class IronCondorStrategy(BaseStrategy):
         quantity = num_spreads
         symbol = self.params["symbol"]
 
+        # Calculate margin requirements for each side of the iron condor
+        # Put side margin
+        put_net_credit = short_put_premium - long_put_premium
+        put_margin = (self.wing_width * 100) - (put_net_credit * 100)
+        put_margin = max(put_margin, 100)  # Minimum $100
+        
+        # Call side margin
+        call_net_credit = short_call_premium - long_call_premium
+        call_margin = (self.wing_width * 100) - (call_net_credit * 100)
+        call_margin = max(call_margin, 100)  # Minimum $100
+        
+        # Iron Condor uses the wider of the two margins (they don't stack)
+        # Only one side will be tested at expiration
+        total_margin_per_contract = max(put_margin, call_margin)
+
         signals = [
             Signal(symbol=symbol, trade_type="IRON_CONDOR_SP", right="P",
                    strike=short_put_strike, expiry=expiry_str, quantity=-quantity,
-                   iv=iv, delta=short_put_delta, premium=short_put_premium),
+                   iv=iv, delta=short_put_delta, premium=short_put_premium,
+                   margin_requirement=total_margin_per_contract),  # Share total margin
             Signal(symbol=symbol, trade_type="IRON_CONDOR_LP", right="P",
                    strike=long_put_strike, expiry=expiry_str, quantity=quantity,
-                   iv=iv, delta=0, premium=long_put_premium),
+                   iv=iv, delta=0, premium=long_put_premium,
+                   margin_requirement=0),  # Long leg hedged
             Signal(symbol=symbol, trade_type="IRON_CONDOR_SC", right="C",
                    strike=short_call_strike, expiry=expiry_str, quantity=-quantity,
-                   iv=iv, delta=short_call_delta, premium=short_call_premium),
+                   iv=iv, delta=short_call_delta, premium=short_call_premium,
+                   margin_requirement=0),  # Already accounted for in SP leg
             Signal(symbol=symbol, trade_type="IRON_CONDOR_LC", right="C",
                    strike=long_call_strike, expiry=expiry_str, quantity=quantity,
-                   iv=iv, delta=0, premium=long_call_premium),
+                   iv=iv, delta=0, premium=long_call_premium,
+                   margin_requirement=0),  # Long leg hedged
         ]
         return signals

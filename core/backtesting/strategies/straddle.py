@@ -59,13 +59,21 @@ class StraddleStrategy(BaseStrategy):
             num_contracts = 1
         
         symbol = self.params["symbol"]
+        
+        # Calculate and assign margin requirement
+        higher_premium = max(put_premium, call_premium)
+        margin_per_contract = higher_premium * 100 * 15
+        margin_per_contract = max(margin_per_contract, strike * 100 * 0.2)
+        
         return [
             Signal(symbol=symbol, trade_type="STRADDLE_PUT", right="P",
                    strike=strike, expiry=expiry_str, quantity=-num_contracts,
-                   iv=iv, delta=put_delta, premium=put_premium),
+                   iv=iv, delta=put_delta, premium=put_premium,
+                   margin_requirement=margin_per_contract),
             Signal(symbol=symbol, trade_type="STRADDLE_CALL", right="C",
                    strike=strike, expiry=expiry_str, quantity=-num_contracts,
-                   iv=iv, delta=call_delta, premium=call_premium),
+                   iv=iv, delta=call_delta, premium=call_premium,
+                   margin_requirement=margin_per_contract),
         ]
 
 
@@ -133,11 +141,19 @@ class StrangleStrategy(BaseStrategy):
             num_contracts = 1
         
         symbol = self.params["symbol"]
+        
+        # Calculate and assign margin requirement
+        higher_premium = max(put_premium, call_premium)
+        margin_per_contract = higher_premium * 100 * 12
+        margin_per_contract = max(margin_per_contract, min(put_strike, call_strike) * 100 * 0.15)
+        
         return [
             Signal(symbol=symbol, trade_type="STRANGLE_PUT", right="P",
                    strike=put_strike, expiry=expiry_str, quantity=-num_contracts,
-                   iv=iv, delta=put_delta, premium=put_premium),
+                   iv=iv, delta=put_delta, premium=put_premium,
+                   margin_requirement=margin_per_contract),
             Signal(symbol=symbol, trade_type="STRANGLE_CALL", right="C",
                    strike=call_strike, expiry=expiry_str, quantity=-num_contracts,
-                   iv=iv, delta=call_delta, premium=call_premium),
+                   iv=iv, delta=call_delta, premium=call_premium,
+                   margin_requirement=margin_per_contract),
         ]

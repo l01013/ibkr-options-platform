@@ -17,6 +17,7 @@ class Signal:
     iv: float
     delta: float
     premium: float       # expected premium per share
+    margin_requirement: float = None  # Optional: strategy can provide specific margin requirement
 
 
 class BaseStrategy(ABC):
