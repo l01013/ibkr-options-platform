@@ -107,9 +107,27 @@ nano .env
 
 **.env 文件内容：**
 ```env
-IBKR_USERNAME=你的IBKR用户名
-IBKR_PASSWORD=你的IBKR密码
-IBKR_TRADING_MODE=paper   # paper 或 live
+# IBKR Credentials (for IB Gateway Docker)
+USERNAME=你的 IBKR 用户名
+PASSWORD='你的 IBKR 密码'  # 如果密码包含特殊字符，用单引号包裹
+
+# IB Gateway Configuration
+GATEWAY_OR_TWS=gateway
+IBC_TradingMode=paper
+IBC_ReadOnlyApi='no'
+IBC_ExistingSessionDetectedAction=primaryonly
+IBC_AutoRestart='yes'
+
+# App Settings
+IBKR_HOST=ibgateway
+IBKR_PORT=8888
+IBKR_CLIENT_ID=1
+IBKR_TRADING_MODE=paper
+APP_HOST=0.0.0.0
+APP_PORT=8050
+APP_DEBUG=false
+DB_PATH=data/trading.db
+LOG_LEVEL=INFO
 ```
 
 ```bash

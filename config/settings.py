@@ -15,10 +15,6 @@ class Settings:
     IBKR_PORT: int = int(os.getenv("IBKR_PORT", "8888"))
     IBKR_CLIENT_ID: int = int(os.getenv("IBKR_CLIENT_ID", "1"))
     IBKR_TRADING_MODE: str = os.getenv("IBKR_TRADING_MODE", "paper")
-    
-    # IBKR Credentials (used by Docker Compose for IB Gateway)
-    IBKR_USERNAME: str = os.getenv("IBKR_USERNAME", "")
-    IBKR_PASSWORD: str = os.getenv("IBKR_PASSWORD", "")
 
     # App
     APP_HOST: str = os.getenv("APP_HOST", "0.0.0.0")

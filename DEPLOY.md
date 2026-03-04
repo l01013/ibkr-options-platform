@@ -112,8 +112,8 @@ services:
     ulimits:
       nofile: 10000  # 必须设置，避免文件描述符错误
     environment:
-      USERNAME: ${IBKR_USERNAME}
-      PASSWORD: '${IBKR_PASSWORD}'
+      USERNAME: ${USERNAME}
+      PASSWORD: '${PASSWORD}'
       GATEWAY_OR_TWS: gateway  # gateway 占用资源更少
       IBC_TradingMode: paper   # paper 或 live
       IBC_ReadOnlyApi: 'no'    # 允许交易操作
