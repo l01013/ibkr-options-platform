@@ -72,6 +72,13 @@ layout = html.Div([
                     dbc.Label("Stop Loss (% of premium)"),
                     dbc.Input(id="bt-stop-loss", type="number", value=200, size="sm", className="mb-3"),
                     
+                    # Max Positions (visible for all strategies)
+                    html.Hr(),
+                    html.H6("Position Management", className="fw-bold mb-2"),
+                    
+                    dbc.Label("Max Positions"),
+                    dbc.Input(id="bt-max-positions", type="number", value=1, min=1, max=50, step=1, size="sm", className="mb-3"),
+                    
                     # Benchmark Comparison
                     html.Hr(),
                     html.H6("Benchmark Comparison", className="fw-bold mb-2"),
@@ -105,9 +112,6 @@ layout = html.Div([
                         
                         dbc.Label("Call Delta (absolute)"),
                         dbc.Input(id="bt-call-delta", type="number", value=0.30, step=0.05, size="sm", className="mb-2"),
-                        
-                        dbc.Label("Max Positions"),
-                        dbc.Input(id="bt-max-positions", type="number", value=1, min=1, max=10, step=1, size="sm", className="mb-3"),
                     ], className="d-none"),
 
                     dbc.Button(
