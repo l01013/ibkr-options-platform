@@ -323,22 +323,48 @@ def create_trade_timeline_chart(
     exit_annotations = []
     
     for i, trade in enumerate(trades):
+        # Generate contract name: e.g., "AAPL 240115 150 Put"
+        symbol = trade.get("symbol", "")
+        expiry = trade.get("expiry", "")
+        strike = trade.get("strike", 0)
+        right = trade.get("right", "")
+        quantity = trade.get("quantity", 0)
+        
+        # Format contract name
+        try:
+            expiry_short = expiry[2:] if len(expiry) >= 6 else expiry
+            option_type = "Put" if right == "P" else "Call"
+            contract_name = f"{symbol} {expiry_short} {strike:.0f} {option_type}"
+        except:
+            contract_name = f"{symbol} {expiry} {strike} {right}"
+        
         # Entry point
         entry_date = trade.get("entry_date", "")
         entry_price = trade.get("underlying_entry", 0)
         if entry_date and entry_price:
             entry_dates.append(entry_date)
             entry_prices.append(entry_price)
-            entry_annotations.append(f"Entry {i+1}<br>{trade.get('trade_type', '')}<br>${entry_price:.2f}")
+            entry_annotations.append(
+                f"Entry {i+1}<br>"
+                f"{contract_name}<br>"
+                f"Qty: {abs(quantity)}x<br>"
+                f"@ ${entry_price:.2f}"
+            )
         
         # Exit point
         exit_date = trade.get("exit_date", "")
         exit_price = trade.get("underlying_exit", trade.get("underlying_entry", 0))
         if exit_date and exit_price:
+            pnl = trade.get("pnl", 0)
             exit_dates.append(exit_date)
             exit_prices.append(exit_price)
-            pnl = trade.get("pnl", 0)
-            exit_annotations.append(f"Exit {i+1}<br>{trade.get('exit_reason', '')}<br>${exit_price:.2f}<br>P&L: ${pnl:+.2f}")
+            exit_annotations.append(
+                f"Exit {i+1}<br>"
+                f"{contract_name}<br>"
+                f"Qty: {abs(quantity)}x<br>"
+                f"@ ${exit_price:.2f}<br>"
+                f"P&L: ${pnl:+.2f}"
+            )
     
     # Add entry markers
     if entry_dates:
