@@ -83,7 +83,202 @@ def create_strategy_state_card(state: Dict[str, Any]) -> dbc.Card:
     ], className="mb-4 shadow-sm")
 
 
-def create_performance_summary_card(performance_metrics: Dict[str, Any]) -> dbc.Card:
+def create_holdings_card(holdings_data: Dict[str, Any]) -> dbc.Card:
+    """Create a card displaying current stock and option holdings."""
+    if not holdings_data:
+        return dbc.Card([
+            dbc.CardHeader(html.H5("Current Holdings", className="mb-0")),
+            dbc.CardBody([
+                html.P("No holdings data available", className="text-muted"),
+            ]),
+        ], className="mb-4 shadow-sm")
+    
+    # Extract holdings info
+    shares_held = holdings_data.get("shares_held", 0)
+    cost_basis = holdings_data.get("cost_basis", 0)
+    options_held = holdings_data.get("options_held", [])
+    
+    # Build holdings rows
+    holdings_rows = []
+    
+    # Stock holding row (if any)
+    if shares_held > 0:
+        holdings_rows.append(
+            html.Tr([
+                html.Td([
+                    html.I(className="bi bi-building me-2"),
+                    "Common Stock"
+                ]),
+                html.Td(f"{shares_held:,}"),
+                html.Td(f"${cost_basis:.2f}"),
+                html.Td("-"),
+                html.Td(f"${cost_basis:.2f}"),
+            ], className="table-success")
+        )
+    
+    # Option holdings rows
+    for opt in options_held:
+        symbol = opt.get("symbol", "N/A")
+        expiry = opt.get("expiry", "N/A")
+        strike = opt.get("strike", 0)
+        right = opt.get("right", "N/A")
+        quantity = opt.get("quantity", 0)
+        entry_price = opt.get("entry_price", 0)
+        market_value = opt.get("market_value", 0)
+        
+        # Format option name: e.g., "AAPL 240119 150 Put"
+        try:
+            expiry_short = expiry[2:] if len(expiry) >= 6 else expiry
+            option_type = "Put" if right == "P" else "Call"
+            option_name = f"{symbol} {expiry_short} {strike:.0f} {option_type}"
+        except:
+            option_name = f"{symbol} {expiry} {strike} {right}"
+        
+        qty_display = f"{abs(quantity)}x {'Long' if quantity > 0 else 'Short'}"
+        
+        holdings_rows.append(
+            html.Tr([
+                html.Td(option_name),
+                html.Td(qty_display),
+                html.Td(f"${entry_price:.2f}"),
+                html.Td(f"${market_value:.2f}"),
+                html.Td(f"${quantity * entry_price * 100:.2f}", 
+                       className="text-success" if quantity * entry_price > 0 else "text-danger"),
+            ])
+        )
+    
+    return dbc.Card([
+        dbc.CardHeader(html.H5("Current Holdings", className="mb-0")),
+        dbc.CardBody([
+            html.Table([
+                html.Thead([
+                    html.Tr([
+                        html.Th("Instrument"),
+                        html.Th("Quantity"),
+                        html.Th("Entry Price"),
+                        html.Th("Market Value"),
+                        html.Th("Total Value"),
+                    ])
+                ]),
+                html.Tbody(holdings_rows),
+            ], className="table table-striped table-sm mb-0"),
+            
+            # Summary footer
+            html.Div([
+                html.Hr(),
+                dbc.Row([
+                    dbc.Col([
+                        html.H6("Total Stock Value", className="text-muted"),
+                        html.H5(f"${cost_basis:.2f}", className="text-info"),
+                    ], width=6),
+                    dbc.Col([
+                        html.H6("Total Options Value", className="text-muted"),
+                        html.H5(f"${sum(opt.get('market_value', 0) for opt in options_held):.2f}", 
+                               className="text-warning"),
+                    ], width=6),
+                ]),
+            ]),
+        ]),
+    ], className="mb-4 shadow-sm")
+
+
+def create_holdings_card(holdings_data: Dict[str, Any]) -> dbc.Card:
+    """Create a card displaying current stock and option holdings."""
+    if not holdings_data:
+        return dbc.Card([
+            dbc.CardHeader(html.H5("Current Holdings", className="mb-0")),
+            dbc.CardBody([
+                html.P("No holdings data available", className="text-muted"),
+            ]),
+        ], className="mb-4 shadow-sm")
+    
+    # Extract holdings info
+    shares_held = holdings_data.get("shares_held", 0)
+    cost_basis = holdings_data.get("cost_basis", 0)
+    options_held = holdings_data.get("options_held", [])
+    
+    # Build holdings rows
+    holdings_rows = []
+    
+    # Stock holding row (if any)
+    if shares_held > 0:
+        holdings_rows.append(
+            html.Tr([
+                html.Td([
+                    html.I(className="bi bi-building me-2"),
+                    "Common Stock"
+                ]),
+                html.Td(f"{shares_held:,}"),
+                html.Td(f"${cost_basis:.2f}"),
+                html.Td("-"),
+                html.Td(f"${cost_basis:.2f}"),
+            ], className="table-success")
+        )
+    
+    # Option holdings rows
+    for opt in options_held:
+        symbol = opt.get("symbol", "N/A")
+        expiry = opt.get("expiry", "N/A")
+        strike = opt.get("strike", 0)
+        right = opt.get("right", "N/A")
+        quantity = opt.get("quantity", 0)
+        entry_price = opt.get("entry_price", 0)
+        market_value = opt.get("market_value", 0)
+        
+        # Format option name: e.g., "AAPL 240119 150 Put"
+        try:
+            expiry_short = expiry[2:] if len(expiry) >= 6 else expiry
+            option_type = "Put" if right == "P" else "Call"
+            option_name = f"{symbol} {expiry_short} {strike:.0f} {option_type}"
+        except:
+            option_name = f"{symbol} {expiry} {strike} {right}"
+        
+        qty_display = f"{abs(quantity)}x {'Long' if quantity > 0 else 'Short'}"
+        
+        holdings_rows.append(
+            html.Tr([
+                html.Td(option_name),
+                html.Td(qty_display),
+                html.Td(f"${entry_price:.2f}"),
+                html.Td(f"${market_value:.2f}"),
+                html.Td(f"${quantity * entry_price * 100:.2f}", 
+                       className="text-success" if quantity * entry_price > 0 else "text-danger"),
+            ])
+        )
+    
+    return dbc.Card([
+        dbc.CardHeader(html.H5("Current Holdings", className="mb-0")),
+        dbc.CardBody([
+            html.Table([
+                html.Thead([
+                    html.Tr([
+                        html.Th("Instrument"),
+                        html.Th("Quantity"),
+                        html.Th("Entry Price"),
+                        html.Th("Market Value"),
+                        html.Th("Total Value"),
+                    ])
+                ]),
+                html.Tbody(holdings_rows),
+            ], className="table table-striped table-sm mb-0"),
+            
+            # Summary footer
+            html.Div([
+                html.Hr(),
+                dbc.Row([
+                    dbc.Col([
+                        html.H6("Total Stock Value", className="text-muted"),
+                        html.H5(f"${cost_basis:.2f}", className="text-info"),
+                    ], width=6),
+                    dbc.Col([
+                        html.H6("Total Options Value", className="text-muted"),
+                        html.H5(f"${sum(opt.get('market_value', 0) for opt in options_held):.2f}", 
+                               className="text-warning"),
+                    ], width=6),
+                ]),
+            ]),
+        ]),
+    ], className="mb-4 shadow-sm")
     """Create a card displaying detailed performance summary."""
     return dbc.Card([
         dbc.CardHeader(html.H5("Performance Summary", className="mb-0")),

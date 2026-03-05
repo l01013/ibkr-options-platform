@@ -5,7 +5,12 @@ from dash import html, dcc, callback, Output, Input, State, no_update
 import dash_bootstrap_components as dbc
 from app.components.tables import metric_card, create_data_table
 from app.components.charts import create_pnl_chart, create_monthly_heatmap, create_trade_timeline_chart
-from app.components.monitoring import create_monitoring_dashboard, create_trade_history_table, create_phase_transition_log
+from app.components.monitoring import (
+    create_monitoring_dashboard, 
+    create_trade_history_table, 
+    create_phase_transition_log,
+    create_holdings_card,  # New component for displaying holdings
+)
 from app.services import get_services
 
 dash.register_page(__name__, path="/backtester", name="Backtester", order=4)
@@ -312,6 +317,16 @@ def run_backtest(
     strategy_performance = result.get("strategy_performance", {})
     if strategy_performance and params.get("strategy") == "wheel":
         monitoring_section = create_monitoring_dashboard(strategy_performance)
+    
+    # Add holdings card (for all strategies)
+    holdings_card = html.Div()
+    if strategy_performance:
+        holdings_data = {
+            "shares_held": strategy_performance.get("shares_held", 0),
+            "cost_basis": strategy_performance.get("cost_basis", 0),
+            "options_held": strategy_performance.get("open_positions", []),
+        }
+        holdings_card = create_holdings_card(holdings_data)
 
     content = html.Div([
         html.H5("Performance Summary", className="mb-3"),
@@ -320,6 +335,7 @@ def run_backtest(
         html.H5("Additional Metrics", className="mt-4 mb-3"),
         extra_row,
         heatmap,
+        holdings_card,  # Show current holdings
         monitoring_section,
         html.H5("Trade Timeline Analysis", className="mt-4 mb-3"),
         trade_timeline,
