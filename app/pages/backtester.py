@@ -41,15 +41,15 @@ layout = html.Div([
 
                     dbc.Label("Date Range"),
                     dbc.Row([
-                        dbc.Col(dbc.Input(id="bt-start", type="date", value="2023-01-01"), width=6),
-                        dbc.Col(dbc.Input(id="bt-end", type="date", value="2024-01-01"), width=6),
+                        dbc.Col(dbc.Input(id="bt-start", type="date", value="2025-01-01"), width=6),
+                        dbc.Col(dbc.Input(id="bt-end", type="date", value="2026-03-05"), width=6),
                     ], className="mb-3"),
 
                     dbc.Label("Initial Capital ($)"),
-                    dbc.Input(id="bt-capital", type="number", value=100000, className="mb-3"),
+                    dbc.Input(id="bt-capital", type="number", value=150000, className="mb-3"),  # Increased to $150k for realistic position sizing
 
                     dbc.Label("Position Size (% of capital)"),
-                    dbc.Input(id="bt-position-size", type="number", value=10.0, step=0.1, min=0.1, max=100, className="mb-3"),
+                    dbc.Input(id="bt-position-size", type="number", value=15.0, step=0.1, min=0.1, max=100, className="mb-3"),  # 15% for better capital utilization
 
                     dbc.Label("Max Leverage"),
                     dbc.Input(id="bt-leverage", type="number", value=1.0, step=0.1, min=1.0, className="mb-3"),
@@ -59,7 +59,7 @@ layout = html.Div([
 
                     dbc.Label("DTE Range (days)"),
                     dbc.Row([
-                        dbc.Col(dbc.Input(id="bt-dte-min", type="number", value=21, size="sm"), width=6),
+                        dbc.Col(dbc.Input(id="bt-dte-min", type="number", value=30, size="sm"), width=6),  # 30-45 DTE is optimal
                         dbc.Col(dbc.Input(id="bt-dte-max", type="number", value=45, size="sm"), width=6),
                     ], className="mb-2"),
 
@@ -67,17 +67,17 @@ layout = html.Div([
                     dbc.Input(id="bt-delta", type="number", value=0.30, step=0.05, size="sm", className="mb-2"),
 
                     dbc.Label("Profit Target (% of premium)"),
-                    dbc.Input(id="bt-profit-target", type="number", value=50, size="sm", className="mb-2"),
+                    dbc.Input(id="bt-profit-target", type="number", value=50, size="sm", className="mb-2"),  # Take profit at 50%
 
                     dbc.Label("Stop Loss (% of premium)"),
-                    dbc.Input(id="bt-stop-loss", type="number", value=200, size="sm", className="mb-3"),
+                    dbc.Input(id="bt-stop-loss", type="number", value=200, size="sm", className="mb-3"),  # Stop loss at 200%
                     
                     # Max Positions (visible for all strategies)
                     html.Hr(),
                     html.H6("Position Management", className="fw-bold mb-2"),
                     
                     dbc.Label("Max Positions"),
-                    dbc.Input(id="bt-max-positions", type="number", value=1, min=1, max=50, step=1, size="sm", className="mb-3"),
+                    dbc.Input(id="bt-max-positions", type="number", value=5, min=1, max=50, step=1, size="sm", className="mb-3"),  # Default 5 for diversification
                     
                     # Benchmark Comparison
                     html.Hr(),
