@@ -105,15 +105,14 @@ class BacktestEngine:
                 if hasattr(strategy, 'on_trade_closed'):
                     strategy.on_trade_closed(trade.to_dict())
 
-            # Generate new signals (with cooldown)
-            cooldown = int(strategy.dte_min * 0.8)
-            if i - last_entry_idx >= cooldown:
-                # Pass position manager to strategy for capital-aware signal generation
-                signals = strategy.generate_signals(
-                    bar_date, underlying_price, iv, simulator.open_positions,
-                    position_mgr=position_mgr
-                )
-                for sig in signals:
+            # Generate new signals (no cooldown for strategies that should trade frequently)
+            # Cooldown was causing delays between closing and reopening positions
+            # For sell_put strategy, we want to deploy capital as soon as it's available
+            signals = strategy.generate_signals(
+                bar_date, underlying_price, iv, simulator.open_positions,
+                position_mgr=position_mgr
+            )
+            for sig in signals:
                     # Use strategy-provided margin requirement if available
                     if sig.margin_requirement is not None and sig.margin_requirement > 0:
                         # Strategy has provided specific margin requirement (e.g., spreads, straddles)
