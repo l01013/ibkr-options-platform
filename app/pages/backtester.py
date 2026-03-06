@@ -293,7 +293,7 @@ def run_backtest(
 
     # Trades table
     trade_columns = [
-        {"headerName": "Entry", "field": "entry_date", "width": 100},
+        {"headerName": "Entry", "field": "entry_date", "width": 100, "sort": "desc"},  # Sort by newest first
         {"headerName": "Exit", "field": "exit_date", "width": 100},
         {"headerName": "Option Contract", "field": "contract_name", "width": 220},  # Increased width for better visibility
         {"headerName": "Type", "field": "trade_type", "width": 120},
