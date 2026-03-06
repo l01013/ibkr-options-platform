@@ -1,7 +1,7 @@
 """Navigation bar component."""
 
 import dash_bootstrap_components as dbc
-from dash import html
+from dash import html, dcc
 
 
 def create_navbar():
@@ -23,6 +23,27 @@ def create_navbar():
                             dbc.NavItem(dbc.NavLink("Options Chain", href="/options-chain", active="exact")),
                             dbc.NavItem(dbc.NavLink("Backtester", href="/backtester", active="exact")),
                             dbc.NavItem(dbc.NavLink("Settings", href="/settings", active="exact")),
+                            
+                            # Language Selector
+                            dbc.NavItem(
+                                dbc.InputGroup(
+                                    [
+                                        dbc.InputGroupText(html.I(className="bi bi-translate", title="Language")),
+                                        dcc.Dropdown(
+                                            id="language-selector",
+                                            options=[
+                                                {"label": "🇺🇸 English", "value": "en"},
+                                                {"label": "🇨🇳 中文", "value": "zh"},
+                                            ],
+                                            value="en",  # Default to English
+                                            clearable=False,
+                                            style={"width": "150px"},
+                                        ),
+                                    ],
+                                    size="sm",
+                                    className="ms-3",
+                                )
+                            ),
                         ],
                         className="ms-auto",
                         navbar=True,
