@@ -128,20 +128,43 @@ class WheelStrategy(BaseStrategy):
                     self.phase = "SP"
                     self.stock_holding.cost_basis = 0.0
                     self.performance_metrics.phase_transitions += 1
-        else:
-            # For non-assignment exits (profit target, stop loss, expiry worthless)
-            if trade.get("trade_type") in ("WHEEL_PUT", "WHEEL_CALL"):
-                # Track exit reasons
+        
+        # For Wheel Put (SP phase), ONLY track assignments and expiry
+        # Profit target and stop loss should NOT apply - we want to hold until assignment or expiry
+        elif trade.get("trade_type") == "WHEEL_PUT":
+            if trade.get("exit_reason") == "EXPIRY":
+                self.performance_metrics.expired_worthless += 1
+                self.logger.info(f"Sell Put expired worthless, keeping premium - ready for next SP cycle")
+            # Note: PROFIT_TARGET and STOP_LOSS exits are logged but don't trigger phase transitions
+            # This is correct behavior - premature exits reduce probability of assignment
+            else:
                 exit_reason = trade.get("exit_reason", "UNKNOWN")
                 if exit_reason == "PROFIT_TARGET":
                     self.performance_metrics.profit_target_exits += 1
+                    self.logger.warning(
+                        f"SP phase exited early with profit target - this reduces assignment probability. "
+                        f"Consider holding until expiry."
+                    )
                 elif exit_reason == "STOP_LOSS":
                     self.performance_metrics.stop_loss_exits += 1
-                elif exit_reason == "EXPIRED_WORTHLESS":
-                    self.performance_metrics.expired_worthless += 1
-                
-                # Log trade completion
-                self.logger.info(f"Trade closed: {trade.get('trade_type')} {exit_reason} PnL: ${trade.get('pnl', 0):+.2f}")
+                    self.logger.warning(
+                        f"SP phase hit stop loss - Wheel strategy aims for assignment, not premium trading. "
+                        f"Stop loss may be counterproductive for SP phase."
+                    )
+        
+        # For Wheel Call (CC phase), process normally
+        elif trade.get("trade_type") == "WHEEL_CALL":
+            # Track exit reasons
+            exit_reason = trade.get("exit_reason", "UNKNOWN")
+            if exit_reason == "PROFIT_TARGET":
+                self.performance_metrics.profit_target_exits += 1
+            elif exit_reason == "STOP_LOSS":
+                self.performance_metrics.stop_loss_exits += 1
+            elif exit_reason == "EXPIRED_WORTHLESS":
+                self.performance_metrics.expired_worthless += 1
+            
+            # Log trade completion
+            self.logger.info(f"Trade closed: {trade.get('trade_type')} {exit_reason} PnL: ${trade.get('pnl', 0):+.2f}")
 
     def generate_signals(
         self,

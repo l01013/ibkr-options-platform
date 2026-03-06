@@ -94,14 +94,27 @@ class BacktestEngine:
                 iv = 0.3  # fallback
 
             # Check exits and release margin
-            closed = simulator.check_exits(
-                bar_date,
-                underlying_price,
-                iv,
-                strategy.profit_target_pct,
-                strategy.stop_loss_pct,
-                min_dte=0,
-            )
+            # For Wheel strategy SP phase, skip profit target/stop loss - only check assignment at expiry
+            if strategy.name == "wheel":
+                # Wheel SP phase: only exit on assignment or expiry (no profit target/stop loss)
+                closed = simulator.check_exits(
+                    bar_date,
+                    underlying_price,
+                    iv,
+                    profit_target_pct=999999,  # Effectively disable profit target
+                    stop_loss_pct=999999,      # Effectively disable stop loss
+                    min_dte=0,
+                )
+            else:
+                # Normal strategies use configured profit target and stop loss
+                closed = simulator.check_exits(
+                    bar_date,
+                    underlying_price,
+                    iv,
+                    strategy.profit_target_pct,
+                    strategy.stop_loss_pct,
+                    min_dte=0,
+                )
             for trade in closed:
                 # Calculate exit trading costs
                 exit_cost = cost_model.calculate_total_cost(-trade.quantity)  # Opposite sign for closing
