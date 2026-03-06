@@ -72,10 +72,18 @@ class BacktestEngine:
             margin_interest_rate=0.05,
         )
         
+        # Initialize cost model for trading costs
+        cost_model = TradingCostModel(
+            commission_rate=params.get("commission_rate", 0.005),
+            slippage_rate=params.get("slippage_rate", 0.001),
+        )
+        
         # Run simulation
         simulator = TradeSimulator()
         daily_pnl = []
         last_entry_idx = -999  # Track cooldown between entries
+        total_commission = 0.0
+        total_slippage = 0.0
 
         for i, bar in enumerate(bars):
             bar_date = bar["date"][:10]  # YYYY-MM-DD
@@ -95,9 +103,18 @@ class BacktestEngine:
                 min_dte=0,
             )
             for trade in closed:
+                # Calculate exit trading costs
+                exit_cost = cost_model.calculate_total_cost(-trade.quantity)  # Opposite sign for closing
+                total_commission += cost_model.calculate_commission(-trade.quantity)
+                total_slippage += cost_model.calculate_slippage(-trade.quantity)
+                
+                # Adjust P&L for round-trip costs (entry + exit already calculated)
+                # The trade.pnl is already calculated by simulator, we just need to subtract exit costs
+                adjusted_pnl = trade.pnl - exit_cost
+                
                 # Create position ID and release margin
                 position_id = f"{trade.symbol}_{trade.entry_date}_{trade.strike}_{trade.right}"
-                position_mgr.release_margin(position_id, trade.pnl)
+                position_mgr.release_margin(position_id, adjusted_pnl)  # Use adjusted P&L
                 
                 # Update trade record with capital information at exit
                 trade.capital_at_exit = position_mgr.net_capital  # Record total capital after closing
@@ -161,6 +178,17 @@ class BacktestEngine:
                             capital_at_entry=position_mgr.net_capital,  # Record total capital at entry
                         )
                         simulator.open_position(pos)
+                        
+                        # Calculate and track trading costs (commission + slippage)
+                        entry_cost = cost_model.calculate_total_cost(sig.quantity)
+                        total_commission += cost_model.calculate_commission(sig.quantity)
+                        total_slippage += cost_model.calculate_slippage(sig.quantity)
+                        
+                        logger.debug(
+                            f"Opened {sig.symbol} {sig.trade_type}: "
+                            f"premium={sig.premium:.2f}, cost={entry_cost:.2f}"
+                        )
+                        
                         last_entry_idx = i
                     else:
                         logger.warning(
@@ -240,6 +268,13 @@ class BacktestEngine:
             "underlying_prices": underlying_prices,
             "params": params,
             "strategy_performance": strategy_performance,
+            "trading_costs": {  # New: Trading cost breakdown
+                "total_commission": round(total_commission, 2),
+                "total_slippage": round(total_slippage, 2),
+                "total_costs": round(total_commission + total_slippage, 2),
+                "commission_rate": cost_model.commission_per_contract,
+                "slippage_rate": cost_model.slippage_per_contract,
+            },
         }
 
     def _get_historical_data(self, symbol: str, start_date: str, end_date: str) -> list[dict]:

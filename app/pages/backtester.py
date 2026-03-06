@@ -119,6 +119,23 @@ layout = html.Div([
                         dbc.Input(id="bt-call-delta", type="number", value=0.30, step=0.05, size="sm", className="mb-2"),
                     ], className="d-none"),
 
+                    # Progress bar (hidden by default)
+                    html.Div(
+                        id="bt-progress-container",
+                        children=[
+                            dbc.Progress(
+                                id="bt-progress",
+                                value=0,
+                                label="Running backtest...",
+                                striped=True,
+                                animated=True,
+                                className="mb-3",
+                                style={"display": "none"},
+                            ),
+                        ],
+                        className="mb-3",
+                    ),
+
                     dbc.Button(
                         "Run Backtest", id="bt-run-btn",
                         color="primary", className="w-100", n_clicks=0,
