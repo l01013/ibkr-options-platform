@@ -251,6 +251,7 @@ class WheelStrategy(BaseStrategy):
             iv=iv,
             delta=delta,
             premium=premium,
+            underlying_price=underlying_price,  # Pass stock price at entry
             margin_requirement=margin_per_contract,  # Cash-secured put requires strike × 100
         )]
 
@@ -303,6 +304,7 @@ class WheelStrategy(BaseStrategy):
             iv=iv,
             delta=delta,
             premium=premium,
+            underlying_price=underlying_price,  # Pass stock price at entry
             margin_requirement=margin_requirement,  # No additional margin needed for covered call
         )]
 
