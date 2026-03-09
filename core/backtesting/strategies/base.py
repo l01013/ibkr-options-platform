@@ -86,8 +86,8 @@ class BaseStrategy(ABC):
             # For call options: when S > K (ITM), delta approaches 1
             # When S < K (OTM), delta approaches 0
             # So to get delta near 0.3 (slightly OTM for covered calls), we want K > S
-            low = underlying_price * 0.9
-            high = underlying_price * 1.05
+            low = underlying_price * 0.8  # Wider range for better convergence
+            high = underlying_price * 1.2
 
         for _ in range(50):
             mid = (low + high) / 2
@@ -101,13 +101,13 @@ class BaseStrategy(ABC):
                 else:
                     low = mid
             else:
-                # For calls: increasing strike makes delta more negative
-                # So if d > target_delta (too positive), decrease strike (high = mid) 
-                # If d < target_delta (too negative), increase strike (low = mid)
+                # For calls: increasing strike makes delta decrease (more negative)
+                # So if d > target_delta (too high), increase strike (low = mid)
+                # If d < target_delta (too low), decrease strike (high = mid)
                 if d > target_delta:
-                    high = mid
-                else:
                     low = mid
+                else:
+                    high = mid
             if abs(d - target_delta) < 0.005:
                 break
 
