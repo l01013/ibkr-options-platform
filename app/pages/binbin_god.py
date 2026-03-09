@@ -5,7 +5,7 @@ from dash import html, dcc, callback, Output, Input, State, no_update
 import dash_bootstrap_components as dbc
 import pandas as pd
 from app.components.tables import metric_card, create_data_table
-from app.components.charts import create_equity_curve_chart
+from app.components.charts import create_pnl_chart
 from app.components.monitoring import create_performance_summary, create_trade_history_table
 from app.services import get_services
 
@@ -306,8 +306,13 @@ def run_binbin_backtest(
     # Performance summary
     summary_html = create_performance_summary(result)
     
-    # Equity curve
-    chart_html = create_equity_curve_chart(daily_pnl)
+    # Equity curve - use create_pnl_chart with daily_pnl values
+    if daily_pnl:
+        dates = [p.get("date", "") for p in daily_pnl]
+        pnl_values = [p.get("cumulative_pnl", 0) for p in daily_pnl]
+        chart_html = create_pnl_chart(dates, pnl_values, title="Binbin God Strategy P&L")
+    else:
+        chart_html = html.P("No chart data available", className="text-muted")
     
     # Trade log - use create_trade_history_table from monitoring
     table_html = create_trade_history_table(trades) if trades else html.P("No trades", className="text-muted")
