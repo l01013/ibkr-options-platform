@@ -347,7 +347,21 @@ class BacktestEngine:
             return []
 
         np.random.seed(42)
-        S0 = 150.0  # starting price
+        
+        # Use realistic starting prices for common symbols (as of 2026)
+        # These are approximate real-world prices for better backtest realism
+        SYMBOL_START_PRICES = {
+            "NVDA": 800.0,   # ~2026 expected range: $700-900
+            "AAPL": 220.0,   # ~2026 expected range: $200-250
+            "MSFT": 500.0,   # ~2026 expected range: $450-550
+            "TSLA": 350.0,   # ~2026 expected range: $300-400
+            "GOOGL": 200.0,  # ~2026 expected range: $180-220
+            "AMZN": 220.0,   # ~2026 expected range: $200-250
+            "META": 600.0,   # ~2026 expected range: $550-650
+        }
+        
+        S0 = SYMBOL_START_PRICES.get(symbol.upper(), 150.0)  # Default to $150 if unknown
+        
         mu = 0.08 / 252  # daily drift
         sigma = 0.25 / np.sqrt(252)  # daily vol
 
