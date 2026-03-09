@@ -85,7 +85,7 @@ class BaseStrategy(ABC):
             target_delta = abs(self.delta_target)
             # For call options: when S > K (ITM), delta approaches 1
             # When S < K (OTM), delta approaches 0
-            # So to get delta near 0.3 (slightly ITM), we want K slightly less than S
+            # So to get delta near 0.3 (slightly OTM for covered calls), we want K > S
             low = underlying_price * 0.9
             high = underlying_price * 1.05
 
