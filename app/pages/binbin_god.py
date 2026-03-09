@@ -3,6 +3,7 @@
 import dash
 from dash import html, dcc, callback, Output, Input, State, no_update
 import dash_bootstrap_components as dbc
+import pandas as pd
 from app.components.tables import create_trade_log_table
 from app.components.charts import create_equity_curve_chart
 from app.components.monitoring import create_performance_summary
@@ -227,9 +228,9 @@ layout = dbc.Container([
 
 
 @callback(
-    Output("bbg-results", "data"),
+    Output("binbin-results-store", "data"),
     Output("binbin-mag7-analysis", "children"),
-    Output("bbg-run-output", "children"),
+    Output("binbin-results-container", "children"),
     Input("bbg-run-btn", "n_clicks"),
     State("bbg-start", "value"),
     State("bbg-end", "value"),
@@ -375,6 +376,3 @@ def run_binbin_backtest(
     
     return result, results_html, mag7_html
 
-
-# Import pandas at module level
-import pandas as pd
