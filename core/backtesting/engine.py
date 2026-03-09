@@ -306,33 +306,48 @@ class BacktestEngine:
         }
 
     def _get_historical_data(self, symbol: str, start_date: str, end_date: str) -> list[dict]:
-        """Fetch historical bars from IBKR or generate synthetic data for testing."""
-        if self._client:
-            try:
-                # Calculate duration
-                sd = datetime.strptime(start_date, "%Y-%m-%d")
-                ed = datetime.strptime(end_date, "%Y-%m-%d")
-                days = (ed - sd).days
-                if days <= 365:
-                    duration = "1 Y"
-                elif days <= 730:
-                    duration = "2 Y"
-                else:
-                    duration = f"{min(days // 365 + 1, 5)} Y"
+        """Fetch historical bars from IBKR. Raises error if data not available."""
+        if not self._client:
+            raise ValueError(
+                f"IBKR client not connected. Cannot fetch historical data for {symbol}. "
+                "Please ensure IB Gateway/TWS is running and connected."
+            )
+        
+        try:
+            # Calculate duration
+            sd = datetime.strptime(start_date, "%Y-%m-%d")
+            ed = datetime.strptime(end_date, "%Y-%m-%d")
+            days = (ed - sd).days
+            if days <= 365:
+                duration = "1 Y"
+            elif days <= 730:
+                duration = "2 Y"
+            else:
+                duration = f"{min(days // 365 + 1, 5)} Y"
 
-                bars = self._client.get_historical_bars(symbol, duration, "1 day")
-                # Filter to date range
-                filtered = [
-                    b for b in bars
-                    if start_date <= b["date"][:10] <= end_date
-                ]
-                if filtered:
-                    return filtered
-            except Exception as e:
-                logger.warning("Failed to fetch live data, using synthetic: %s", e)
-
-        # Generate synthetic data for testing when IBKR is not connected
-        return self._generate_synthetic_data(symbol, start_date, end_date)
+            bars = self._client.get_historical_bars(symbol, duration, "1 day")
+            # Filter to date range
+            filtered = [
+                b for b in bars
+                if start_date <= b["date"][:10] <= end_date
+            ]
+            if not filtered:
+                raise ValueError(
+                    f"No historical data available for {symbol} in the range "
+                    f"{start_date} to {end_date}. Please check:\n"
+                    f"1. IB Gateway/TWS connection status\n"
+                    f"2. Whether the symbol '{symbol}' exists\n"
+                    f"3. The requested date range"
+                )
+            
+            return filtered
+            
+        except Exception as e:
+            # Re-raise with more context
+            raise RuntimeError(
+                f"Failed to fetch historical data for {symbol}: {str(e)}\n"
+                "Real-time data connection required. Please check IB Gateway/TWS status."
+            )
 
     def _generate_synthetic_data(
         self, symbol: str, start_date: str, end_date: str
