@@ -86,11 +86,12 @@ layout = html.Div([
                             width=8
                         ),
                         dbc.Col(
-                            dbc.FormCheck(
+                            dcc.Checklist(
                                 id="bt-disable-profit-target",
-                                label="Disable",
-                                value=False,
-                                className="mt-2"
+                                options=[{"label": " Disable", "value": True}],
+                                value=[],
+                                inline=True,
+                                className="mt-2",
                             ),
                             width=4
                         ),
@@ -103,11 +104,12 @@ layout = html.Div([
                             width=8
                         ),
                         dbc.Col(
-                            dbc.FormCheck(
+                            dcc.Checklist(
                                 id="bt-disable-stop-loss",
-                                label="Disable",
-                                value=False,
-                                className="mt-2"
+                                options=[{"label": " Disable", "value": True}],
+                                value=[],
+                                inline=True,
+                                className="mt-2",
                             ),
                             width=4
                         ),
@@ -262,8 +264,9 @@ def run_backtest(
     data_client = services.get("data_client")
 
     # Use special value 999999 to disable profit target/stop loss
-    profit_target_value = 999999 if disable_profit_target else (profit_target or 50)
-    stop_loss_value = 999999 if disable_stop_loss else (stop_loss or 200)
+    # Checklist returns list, check if True is in the list
+    profit_target_value = 999999 if (disable_profit_target and True in disable_profit_target) else (profit_target or 50)
+    stop_loss_value = 999999 if (disable_stop_loss and True in disable_stop_loss) else (stop_loss or 200)
 
     params = {
         "strategy": strategy,

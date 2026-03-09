@@ -154,16 +154,17 @@ layout = dbc.Container([
                             width=8
                         ),
                         dbc.Col(
-                            dbc.FormCheck(
+                            dcc.Checklist(
                                 id="bbg-disable-profit-target",
-                                label="Disable",
-                                value=False,
+                                options=[{"label": " Disable", "value": True}],
+                                value=[],
+                                inline=True,
                                 className="mt-2"
                             ),
                             width=4
                         ),
                     ], className="mb-2"),
-                    
+
                     # Stop Loss
                     dbc.Label("Stop Loss (% of premium)"),
                     dbc.Row([
@@ -173,10 +174,11 @@ layout = dbc.Container([
                             width=8
                         ),
                         dbc.Col(
-                            dbc.FormCheck(
+                            dcc.Checklist(
                                 id="bbg-disable-stop-loss",
-                                label="Disable",
-                                value=False,
+                                options=[{"label": " Disable", "value": True}],
+                                value=[],
+                                inline=True,
                                 className="mt-2"
                             ),
                             width=4
@@ -252,8 +254,9 @@ def run_binbin_backtest(
     engine = services["backtest_engine"]
     
     # Prepare parameters
-    profit_target_value = 999999 if disable_profit_target else (profit_target or 50)
-    stop_loss_value = 999999 if disable_stop_loss else (stop_loss or 200)
+    # Checklist returns list, check if True is in the list
+    profit_target_value = 999999 if (disable_profit_target and True in disable_profit_target) else (profit_target or 50)
+    stop_loss_value = 999999 if (disable_stop_loss and True in disable_stop_loss) else (stop_loss or 200)
     
     params = {
         "strategy": "binbin_god",
