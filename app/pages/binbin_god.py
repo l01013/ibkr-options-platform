@@ -4,9 +4,9 @@ import dash
 from dash import html, dcc, callback, Output, Input, State, no_update
 import dash_bootstrap_components as dbc
 import pandas as pd
-from app.components.tables import create_trade_log_table
+from app.components.tables import metric_card, create_data_table
 from app.components.charts import create_equity_curve_chart
-from app.components.monitoring import create_performance_summary
+from app.components.monitoring import create_performance_summary, create_trade_history_table
 from app.services import get_services
 
 dash.register_page(__name__, path="/binbin-god", name="Binbin God", icon="bi bi-robot")
@@ -309,8 +309,8 @@ def run_binbin_backtest(
     # Equity curve
     chart_html = create_equity_curve_chart(daily_pnl)
     
-    # Trade log
-    table_html = create_trade_log_table(trades)
+    # Trade log - use create_trade_history_table from monitoring
+    table_html = create_trade_history_table(trades) if trades else html.P("No trades", className="text-muted")
     
     # MAG7 analysis
     mag7_analysis = result.get("mag7_analysis", {})
