@@ -92,20 +92,24 @@ class WheelStrategy(BaseStrategy):
             self.performance_metrics.successful_assignments += 1
             if trade.get("trade_type") == "WHEEL_PUT":
                 # Put assigned: we bought shares at strike price
+                # Note: The option P&L has already been calculated by the simulator
+                # We only need to track the stock position for the CC phase
                 strike = trade["strike"]
                 quantity = abs(trade["quantity"])
                 shares_acquired = quantity * 100
                 
-                # Update stock holding
-                total_cost = self.stock_holding.shares * self.stock_holding.cost_basis
-                total_cost += shares_acquired * strike
+                # Update stock holding - track shares acquired from assignment
+                # Cost basis is tracked separately for stock (not including option premium)
+                total_stock_cost = self.stock_holding.shares * self.stock_holding.cost_basis
+                total_stock_cost += shares_acquired * strike
                 self.stock_holding.shares += shares_acquired
                 if self.stock_holding.shares > 0:
-                    self.stock_holding.cost_basis = total_cost / self.stock_holding.shares
+                    self.stock_holding.cost_basis = total_stock_cost / self.stock_holding.shares
                 
-                # Adjust cost basis by premium collected
-                premium_collected = trade["entry_price"] * shares_acquired
-                self.stock_holding.total_premium_collected += premium_collected
+                # Track premium collected from the put sale (already included in option P&L)
+                # We track it separately for informational purposes only
+                premium_from_put = trade["entry_price"] * shares_acquired
+                self.stock_holding.total_premium_collected += premium_from_put
                 
                 # Log transition
                 self._log_transition("SP", "CC", f"Put assigned at ${strike}, acquired {shares_acquired} shares")
@@ -115,16 +119,22 @@ class WheelStrategy(BaseStrategy):
                 
             elif trade.get("trade_type") == "WHEEL_CALL":
                 # Call assigned: we sold shares at strike price
+                # The option P&L has already been calculated by the simulator
+                # We need to realize the stock P&L here
                 strike = trade["strike"]
                 quantity = abs(trade["quantity"])
                 shares_sold = quantity * 100
                 
+                # Calculate stock P&L from this assignment
+                stock_cost_basis = self.stock_holding.cost_basis * shares_sold
+                stock_proceeds = strike * shares_sold
+                
                 # Reduce stock holding
                 self.stock_holding.shares = max(0, self.stock_holding.shares - shares_sold)
                 
-                # Add premium to total collected
-                premium_collected = trade["entry_price"] * shares_sold
-                self.stock_holding.total_premium_collected += premium_collected
+                # Add premium from call sale (already included in option P&L)
+                premium_from_call = trade["entry_price"] * shares_sold
+                self.stock_holding.total_premium_collected += premium_from_call
                 
                 # If no more shares, switch back to Sell Put phase
                 if self.stock_holding.shares == 0:
