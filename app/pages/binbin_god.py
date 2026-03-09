@@ -40,8 +40,10 @@ def create_strategy_info_card():
             html.Hr(),
             
             html.H6("MAG7 Universe:", className="fw-bold"),
-            dbc.Badge(label, color="info", className="me-1 mb-1") 
-            for label in STRATEGY_INFO["universe"],
+            html.Div([
+                dbc.Badge(label, color="info", className="me-1 mb-1") 
+                for label in STRATEGY_INFO["universe"]
+            ]),
             
             html.H6("Selection Criteria:", className="fw-bold mt-3"),
             html.Ul([
