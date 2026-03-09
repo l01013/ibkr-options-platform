@@ -44,6 +44,14 @@ layout = html.Div([
                     dbc.Label("Symbol"),
                     dbc.Input(id="bt-symbol", value="NVDA", className="mb-3"),
 
+                    # Use Synthetic Data Option
+                    dbc.FormCheck(
+                        id="bt-use-synthetic",
+                        label="Use Random Synthetic Data (for testing without IBKR connection)",
+                        value=False,
+                        className="mb-3",
+                    ),
+
                     dbc.Label("Date Range"),
                     dbc.Row([
                         dbc.Col(dbc.Input(id="bt-start", type="date", value="2025-01-01"), width=6),
@@ -233,13 +241,14 @@ def toggle_delta_config(strategy):
     State("bt-benchmarks", "value"),
     State("bt-disable-profit-target", "value"),
     State("bt-disable-stop-loss", "value"),
+    State("bt-use-synthetic", "value"),
     prevent_initial_call=True,
 )
 def run_backtest(
     n_clicks, strategy, symbol, start_date, end_date,
     capital, leverage, dte_min, dte_max, delta, profit_target, stop_loss,
     put_delta, call_delta, max_positions, benchmarks,
-    disable_profit_target, disable_stop_loss
+    disable_profit_target, disable_stop_loss, use_synthetic
 ):
     if not symbol or not start_date or not end_date:
         return no_update, no_update
@@ -268,6 +277,8 @@ def run_backtest(
         "delta_target": delta or 0.30,
         "profit_target_pct": profit_target_value,
         "stop_loss_pct": stop_loss_value,
+        # Synthetic data option
+        "use_synthetic_data": use_synthetic if use_synthetic else False,
         # Wheel strategy specific parameters
         "put_delta": put_delta or 0.30,
         "call_delta": call_delta or 0.30,

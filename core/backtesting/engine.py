@@ -41,13 +41,14 @@ class BacktestEngine:
 
         params keys: strategy, symbol, start_date, end_date,
                      initial_capital, dte_min, dte_max, delta_target,
-                     profit_target_pct, stop_loss_pct
+                     profit_target_pct, stop_loss_pct, use_synthetic_data
         """
         strategy_name = params["strategy"]
         symbol = params["symbol"]
         start_date = params["start_date"]
         end_date = params["end_date"]
         initial_capital = params.get("initial_capital", 100000)
+        use_synthetic = params.get("use_synthetic_data", False)  # New parameter
 
         # Create strategy instance
         strategy_cls = STRATEGY_MAP.get(strategy_name)
@@ -55,8 +56,8 @@ class BacktestEngine:
             raise ValueError(f"Unknown strategy: {strategy_name}")
         strategy = strategy_cls(params)
 
-        # Fetch historical price data
-        bars = self._get_historical_data(symbol, start_date, end_date)
+        # Fetch historical price data (or generate synthetic data)
+        bars = self._get_historical_data(symbol, start_date, end_date, use_synthetic=use_synthetic)
         if not bars:
             raise ValueError(f"No historical data for {symbol}")
 
@@ -313,8 +314,27 @@ class BacktestEngine:
             },
         }
 
-    def _get_historical_data(self, symbol: str, start_date: str, end_date: str) -> list[dict]:
-        """Fetch historical bars from IBKR. Raises error if data not available."""
+    def _get_historical_data(self, symbol: str, start_date: str, end_date: str, use_synthetic: bool = False) -> list[dict]:
+        """Fetch historical bars from IBKR. If use_synthetic=True, generate random data instead.
+        
+        Args:
+            symbol: Stock symbol
+            start_date: Start date (YYYY-MM-DD)
+            end_date: End date (YYYY-MM-DD)
+            use_synthetic: If True, generate synthetic data instead of fetching from IBKR
+            
+        Returns:
+            List of OHLCV bars
+            
+        Raises:
+            ValueError: If IBKR not connected and use_synthetic=False
+        """
+        # If synthetic data requested, generate it directly
+        if use_synthetic:
+            logger.info(f"Generating synthetic data for {symbol} from {start_date} to {end_date}")
+            return self._generate_synthetic_data(symbol, start_date, end_date)
+        
+        # Require real IBKR data
         if not self._client:
             raise ValueError(
                 f"IBKR client not connected. Cannot fetch historical data for {symbol}. "
