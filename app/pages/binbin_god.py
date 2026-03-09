@@ -6,7 +6,7 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 from app.components.tables import metric_card, create_data_table
 from app.components.charts import create_pnl_chart
-from app.components.monitoring import create_performance_summary, create_trade_history_table
+from app.components.monitoring import create_trade_history_table, create_performance_metrics_card
 from app.services import get_services
 
 dash.register_page(__name__, path="/binbin-god", name="Binbin God", icon="bi bi-robot")
@@ -303,8 +303,11 @@ def run_binbin_backtest(
     trades = result.get("trades", [])
     daily_pnl = result.get("daily_pnl", [])
     
-    # Performance summary
-    summary_html = create_performance_summary(result)
+    # Performance summary - use create_performance_metrics_card
+    if metrics:
+        summary_html = create_performance_metrics_card(metrics)
+    else:
+        summary_html = html.P("No performance data available", className="text-muted")
     
     # Equity curve - use create_pnl_chart with daily_pnl values
     if daily_pnl:
