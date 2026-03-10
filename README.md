@@ -25,11 +25,12 @@
 
 ## 技术栈
 
-- **后端**: Python 3.11, ib_insync
+- **后端**: Python3.11, ib_insync
 - **前端**: Plotly Dash, Dash Bootstrap Components, AG Grid
 - **期权定价**: Black-Scholes (scipy)
 - **数据库**: SQLite + SQLAlchemy
 - **部署**: Docker + Docker Compose
+- **IBKR 连接**: [extrange/ibkr-docker](https://github.com/extrange/ibkr-docker) - 第三方 IB Gateway Docker 镜像
 
 ## 前提条件
 
@@ -91,7 +92,7 @@ PYTHONPATH=. python -m app.main
 
 ### 方式二：Docker 部署（推荐）
 
-Docker 方式会自动启动 IB Gateway 容器，无需手动安装 TWS。
+使用第三方 IB Gateway Docker 镜像 ([extrange/ibkr-docker](https://github.com/extrange/ibkr-docker))，自动启动 IB Gateway 容器，无需手动安装 TWS。
 
 ```bash
 # 克隆仓库
