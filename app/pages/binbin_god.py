@@ -167,18 +167,22 @@ layout = dbc.Container([
                         dbc.Col(
                             dbc.Input(id="bbg-profit-target", type="number", 
                                      value=50, step=10, size="sm"),
-                            width=8
+                           width=8
                         ),
-                        dbc.Col(
+                       dbc.Col(
                             dcc.Checklist(
-                                id="bbg-disable-profit-target",
-                                options=[{"label": " Disable", "value": True}],
-                                value=[],
-                                inline=True,
+                               id="bbg-disable-profit-target",
+                               options=[{"label": "Disable", "value": True}],
+                               value=[],
                                 className="mt-2",
-                                style={"color": "#fff"}  # White text for visibility
+                                style={
+                                    "color": "#fff",
+                                    "display": "flex",
+                                    "alignItems": "center",
+                                    "gap": "8px"
+                                }
                             ),
-                            width=4
+                           width=4
                         ),
                     ], className="mb-2"),
 
@@ -188,16 +192,20 @@ layout = dbc.Container([
                         dbc.Col(
                             dbc.Input(id="bbg-stop-loss", type="number", 
                                      value=200, step=50, size="sm"),
-                            width=8
+                           width=8
                         ),
-                        dbc.Col(
+                      dbc.Col(
                             dcc.Checklist(
                                id="bbg-disable-stop-loss",
-                               options=[{"label": " Disable", "value": True}],
-                               value=[],
-                                inline=True,
+                              options=[{"label": "Disable", "value": True}],
+                              value=[],
                                 className="mt-2",
-                                style={"color": "#fff"}  # White text for visibility
+                                style={
+                                    "color": "#fff",
+                                    "display": "flex",
+                                    "alignItems": "center",
+                                    "gap": "8px"
+                                }
                             ),
                            width=4
                         ),

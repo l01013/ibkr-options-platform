@@ -86,33 +86,41 @@ layout = html.Div([
                             dbc.Input(id="bt-profit-target", type="number", value=50, step=10, size="sm"),
                             width=8
                         ),
-                        dbc.Col(
+                       dbc.Col(
                             dcc.Checklist(
                                 id="bt-disable-profit-target",
-                                options=[{"label": " Disable", "value": True}],
-                                value=[],
-                                inline=True,
+                               options=[{"label": "Disable", "value": True}],
+                               value=[],
                                 className="mt-2",
-                                style={"color": "#fff"}  # White text for visibility
+                                style={
+                                    "color": "#fff",
+                                    "display": "flex",
+                                    "alignItems": "center",
+                                    "gap": "8px"
+                                }
                             ),
                             width=4
                         ),
                     ], className="mb-2"),
 
-                    dbc.Label("Stop Loss (% of premium)"),
-                    dbc.Row([
-                        dbc.Col(
-                            dbc.Input(id="bt-stop-loss", type="number", value=200, step=50, size="sm"),
+                   dbc.Label("Stop Loss (% of premium)"),
+                   dbc.Row([
+                       dbc.Col(
+                           dbc.Input(id="bt-stop-loss", type="number", value=200, step=50, size="sm"),
                             width=8
                         ),
-                        dbc.Col(
+                       dbc.Col(
                             dcc.Checklist(
                                 id="bt-disable-stop-loss",
-                                options=[{"label": " Disable", "value": True}],
-                                value=[],
-                                inline=True,
+                               options=[{"label": "Disable", "value": True}],
+                               value=[],
                                 className="mt-2",
-                                style={"color": "#fff"}  # White text for visibility
+                                style={
+                                    "color": "#fff",
+                                    "display": "flex",
+                                    "alignItems": "center",
+                                    "gap": "8px"
+                                }
                             ),
                             width=4
                         ),
