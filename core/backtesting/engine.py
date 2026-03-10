@@ -83,10 +83,10 @@ class BacktestEngine:
         )
         
         # Run simulation
-       simulator = TradeSimulator()
-       daily_pnl = []
+        simulator = TradeSimulator()
+        daily_pnl = []
         last_entry_idx = -999
-        total_commission= 0.0
+        total_commission = 0.0
         total_slippage = 0.0
         
         # Initialize stock position for Covered Call strategy
