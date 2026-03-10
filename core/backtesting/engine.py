@@ -258,12 +258,11 @@ class BacktestEngine:
                 stock_unrealized_pnl = stock_market_value - stock_cost
             
             portfolio_value = position_mgr.net_capital + open_pnl + stock_unrealized_pnl
+            total_open_pnl = open_pnl + stock_unrealized_pnl
             
             # Update strategy daily stats if it supports monitoring
             if hasattr(strategy, 'update_daily_stats'):
-                # Pass stock unrealized P&L for accurate tracking
-                total_open_pnl = open_pnl + stock_unrealized_pnl
-                strategy.update_daily_stats(bar_date, portfolio_value, total_open_pnl)
+               strategy.update_daily_stats(bar_date, portfolio_value, total_open_pnl)
             
             daily_pnl.append({
                 "date": bar_date,
@@ -275,6 +274,7 @@ class BacktestEngine:
                 "margin_used": position_mgr.total_margin_used,
                 "available_margin": position_mgr.available_margin,
             })
+
 
         # Force close remaining positions at end
         if bars:
