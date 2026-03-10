@@ -239,18 +239,29 @@ class BacktestEngine:
             daily_interest = position_mgr.apply_daily_interest()
             
             # Daily mark-to-market
-            open_pnl = simulator.get_total_open_pnl()
-            portfolio_value = position_mgr.net_capital + open_pnl
+           open_pnl = simulator.get_total_open_pnl()
+            
+            # For Wheel strategy, also calculate unrealized P&L from stock holdings
+            stock_unrealized_pnl = 0.0
+            if hasattr(strategy, 'stock_holding') and strategy.stock_holding.shares > 0:
+                # Calculate unrealized P&L from stock position
+                stock_cost = strategy.stock_holding.shares * strategy.stock_holding.cost_basis
+                stock_market_value = strategy.stock_holding.shares * underlying_price
+                stock_unrealized_pnl = stock_market_value - stock_cost
+            
+            portfolio_value = position_mgr.net_capital + open_pnl + stock_unrealized_pnl
             
             # Update strategy daily stats if it supports monitoring
             if hasattr(strategy, 'update_daily_stats'):
-                strategy.update_daily_stats(bar_date, portfolio_value, open_pnl)
+                # Pass stock unrealized P&L for accurate tracking
+                total_open_pnl = open_pnl + stock_unrealized_pnl
+                strategy.update_daily_stats(bar_date, portfolio_value, total_open_pnl)
             
             daily_pnl.append({
                 "date": bar_date,
-                "cumulative_pnl": position_mgr.cumulative_pnl + open_pnl,
+                "cumulative_pnl": position_mgr.cumulative_pnl + total_open_pnl,
                 "closed_pnl": position_mgr.cumulative_pnl,
-                "open_pnl": open_pnl,
+                "open_pnl": total_open_pnl,
                 "portfolio_value": portfolio_value,
                 "margin_interest": daily_interest,
                 "margin_used": position_mgr.total_margin_used,

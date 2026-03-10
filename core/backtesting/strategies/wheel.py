@@ -128,20 +128,30 @@ class WheelStrategy(BaseStrategy):
                 # Calculate stock P&L from this assignment
                 stock_cost_basis = self.stock_holding.cost_basis * shares_sold
                 stock_proceeds = strike * shares_sold
+                stock_pnl = stock_proceeds - stock_cost_basis  # Realized stock P&L
                 
                 # Reduce stock holding
-                self.stock_holding.shares = max(0, self.stock_holding.shares - shares_sold)
+               self.stock_holding.shares = max(0, self.stock_holding.shares - shares_sold)
                 
                 # Add premium from call sale (already included in option P&L)
                 premium_from_call = trade["entry_price"] * shares_sold
-                self.stock_holding.total_premium_collected += premium_from_call
+               self.stock_holding.total_premium_collected += premium_from_call
+                
+                # Log the complete P&L breakdown for transparency
+               option_pnl = trade.get("pnl", 0)
+                total_trade_pnl = option_pnl + stock_pnl
+               self.logger.info(
+                    f"Call assigned: Option P&L=${option_pnl:+.2f}, Stock P&L=${stock_pnl:+.2f}, "
+                    f"Total=${total_trade_pnl:+.2f} (bought at ${self.stock_holding.cost_basis:.2f}, "
+                    f"sold at ${strike:.2f}, {shares_sold} shares)"
+                )
                 
                 # If no more shares, switch back to Sell Put phase
                 if self.stock_holding.shares == 0:
-                    self._log_transition("CC", "SP", f"Call assigned at ${strike}, sold {shares_sold} shares")
-                    self.phase = "SP"
-                    self.stock_holding.cost_basis = 0.0
-                    self.performance_metrics.phase_transitions += 1
+                   self._log_transition("CC", "SP", f"Call assigned at ${strike}, sold {shares_sold} shares")
+                   self.phase = "SP"
+                   self.stock_holding.cost_basis = 0.0
+                   self.performance_metrics.phase_transitions += 1
         
         # For Wheel Put (SP phase), ONLY track assignments and expiry
         # Profit target and stop loss should NOT apply - we want to hold until assignment or expiry
