@@ -168,7 +168,11 @@ class BacktestEngine:
                 
                 # Notify strategy of closed trade (for stateful strategies like Wheel)
                 if hasattr(strategy, 'on_trade_closed'):
-                    strategy.on_trade_closed(trade.to_dict())
+                    additional_pnl = strategy.on_trade_closed(trade.to_dict())
+                    # For Wheel strategy: add stock P&L from call assignment
+                    if additional_pnl and additional_pnl != 0:
+                        position_mgr.cumulative_pnl += additional_pnl
+                        position_mgr.net_capital += additional_pnl
 
             # Generate new signals (no cooldown for strategies that should trade frequently)
             # Cooldown was causing delays between closing and reopening positions

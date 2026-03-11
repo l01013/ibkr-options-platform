@@ -84,9 +84,17 @@ class WheelStrategy(BaseStrategy):
         return "wheel"
 
     def on_trade_closed(self, trade: dict):
-        """Called by engine when a trade is closed. Updates internal state and tracks performance."""
+        """Called by engine when a trade is closed. Updates internal state and tracks performance.
+        
+        Returns:
+            float: Additional P&L from stock position (e.g., when call is assigned).
+                   This should be added to cumulative_pnl by the engine.
+        """
         # Record trade in history
         self._record_trade(trade)
+        
+        # Track additional stock P&L that needs to be added to cumulative_pnl
+        additional_stock_pnl = 0.0
         
         if trade.get("exit_reason") == "ASSIGNMENT":
             self.performance_metrics.successful_assignments += 1
@@ -129,6 +137,9 @@ class WheelStrategy(BaseStrategy):
                 stock_cost_basis = self.stock_holding.cost_basis * shares_sold
                 stock_proceeds = strike * shares_sold
                 stock_pnl = stock_proceeds - stock_cost_basis  # Realized stock P&L
+                
+                # IMPORTANT: Record stock P&L to be added to cumulative_pnl
+                additional_stock_pnl = stock_pnl
                 
                 # Reduce stock holding
                 self.stock_holding.shares = max(0, self.stock_holding.shares - shares_sold)
@@ -189,6 +200,9 @@ class WheelStrategy(BaseStrategy):
             
             # Log trade completion
             self.logger.info(f"Trade closed: {trade.get('trade_type')} {exit_reason} PnL: ${trade.get('pnl', 0):+.2f}")
+        
+        # Return additional stock P&L to be added to cumulative_pnl by the engine
+        return additional_stock_pnl
 
     def generate_signals(
         self,

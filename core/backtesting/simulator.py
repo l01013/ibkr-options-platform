@@ -178,8 +178,12 @@ class TradeSimulator:
                 exit_price = intrinsic_value
                 exit_reason = "EXPIRY"
                 
-                # Check assignment for short puts
+                # Check assignment for short puts (stock price below strike)
                 if pos.right == "P" and pos.quantity < 0 and underlying_price < pos.strike:
+                    exit_reason = "ASSIGNMENT"
+                
+                # Check assignment for short calls (stock price above strike)
+                if pos.right == "C" and pos.quantity < 0 and underlying_price > pos.strike:
                     exit_reason = "ASSIGNMENT"
 
             if exit_reason:
