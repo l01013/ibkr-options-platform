@@ -401,6 +401,59 @@ class BinbinGodStrategy(BaseStrategy):
             else:
                 logger.warning(f"Call assignment error: Trying to sell {shares_sold} shares but only have {self.stock_holding.shares}")
     
+    def on_trade_closed(self, trade: dict):
+        """Called by engine when a trade is closed. Updates internal state and tracks performance.
+        
+        Returns:
+            float: Additional P&L from stock position (e.g., when call is assigned).
+                   This should be added to cumulative_pnl by the engine.
+        """
+        # Track additional stock P&L to return to engine
+        additional_stock_pnl = 0.0
+        
+        if trade.get("exit_reason") == "ASSIGNMENT":
+            right = trade.get("right", "")
+            quantity = abs(trade.get("quantity", 0))
+            strike = trade.get("strike", 0)
+            
+            if right == "P":
+                # Put assignment: we bought shares
+                shares_acquired = quantity * 100
+                self.stock_holding.shares += shares_acquired
+                self.stock_holding.cost_basis = strike
+                self.phase = "CC"  # Switch to Covered Call phase
+                logger.info(f"Put assigned: Bought {shares_acquired} shares @ ${strike}, switching to CC phase")
+            
+            elif right == "C":
+                # Call assignment: we sold shares
+                shares_sold = quantity * 100
+                if shares_sold <= self.stock_holding.shares:
+                    # Calculate realized stock P&L
+                    stock_cost_basis = self.stock_holding.cost_basis * shares_sold
+                    stock_proceeds = strike * shares_sold
+                    stock_pnl = stock_proceeds - stock_cost_basis
+                    
+                    # IMPORTANT: Record stock P&L to be added to cumulative_pnl
+                    additional_stock_pnl = stock_pnl
+                   
+                    # Log complete P&L breakdown
+                    option_pnl = trade.get("pnl", 0)
+                    total_trade_pnl = option_pnl + stock_pnl
+                    logger.info(
+                        f"Call assigned: Option P&L=${option_pnl:+.2f}, Stock P&L=${stock_pnl:+.2f}, "
+                        f"Total=${total_trade_pnl:+.2f} (bought at ${self.stock_holding.cost_basis:.2f}, "
+                        f"sold at ${strike:.2f}, {shares_sold} shares)"
+                    )
+                   
+                    self.stock_holding.shares -= shares_sold
+                    if self.stock_holding.shares == 0:
+                        self.phase = "SP"  # Switch back to Sell Put phase
+                else:
+                    logger.warning(f"Call assignment error: Trying to sell {shares_sold} shares but only have {self.stock_holding.shares}")
+        
+        # Return additional stock P&L for engine to add to cumulative_pnl
+        return additional_stock_pnl
+    
     def get_mag7_analysis(self) -> Dict[str, Any]:
         """Get MAG7 analysis results."""
         return self.mag7_analysis

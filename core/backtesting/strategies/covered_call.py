@@ -105,9 +105,17 @@ class CoveredCallStrategy(BaseStrategy):
         )]
 
     def on_trade_closed(self, trade: dict):
-        """Called when option position is closed."""
+        """Called when option position is closed.
+        
+        Returns:
+            float: Additional P&L from stock position (when call is assigned).
+                   This should be added to cumulative_pnl by the engine.
+        """
         exit_reason = trade.get("exit_reason", "")
         option_pnl = trade.get("pnl", 0)
+        
+        # Track additional stock P&L to return to engine
+        additional_stock_pnl = 0.0
         
         if exit_reason == "EXPIRY":
             # Call expired worthless - keep premium and shares
@@ -127,6 +135,9 @@ class CoveredCallStrategy(BaseStrategy):
                 stock_proceeds = strike * shares_sold
                 stock_pnl = stock_proceeds - stock_cost
                 
+                # IMPORTANT: Record stock P&L to be added to cumulative_pnl
+                additional_stock_pnl = stock_pnl
+                
                 # Add option premium received
                 option_premium = trade.get("entry_price", 0) * shares_sold
                 
@@ -144,3 +155,6 @@ class CoveredCallStrategy(BaseStrategy):
                 )
             else:
                 self.logger.error(f"Assignment error: trying to sell {shares_sold} but only have {self.stock_holding.shares}")
+        
+        # Return additional stock P&L for engine to add to cumulative_pnl
+        return additional_stock_pnl
