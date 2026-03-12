@@ -4,9 +4,14 @@ import dash
 from dash import html, dcc, callback, Output, Input, State, no_update
 import dash_bootstrap_components as dbc
 import pandas as pd
-from app.components.tables import metric_card, create_data_table
-from app.components.charts import create_pnl_chart
-from app.components.monitoring import create_trade_history_table, create_performance_metrics_card
+from app.components.tables import metric_card, create_data_table, create_trade_history_table, create_performance_metrics_card
+from app.components.charts import create_pnl_chart, create_monthly_heatmap, create_trade_timeline_chart
+from app.components.monitoring import (
+    create_monitoring_dashboard,
+    create_trade_history_table,
+    create_phase_transition_log,
+    create_holdings_card,
+)
 from app.services import get_services
 
 dash.register_page(__name__, path="/binbin-god", name="Binbin God", icon="bi bi-robot")
@@ -312,35 +317,107 @@ def run_binbin_backtest(
     if not result:
         return {}, html.P("No results generated", className="text-muted"), ""
     
-    # Build results UI
+    # Build results UI (same structure as backtester.py)
     metrics = result.get("metrics", {})
     trades = result.get("trades", [])
     daily_pnl = result.get("daily_pnl", [])
     
-    # Performance summary - use create_performance_metrics_card
-    if metrics:
-        summary_html = create_performance_metrics_card(metrics)
-    else:
-        summary_html = html.P("No performance data available", className="text-muted")
+    # Metric cards (same as backtester)
+    total_ret = metrics.get("total_return_pct", 0)
+    ret_color = "success" if total_ret >= 0 else "danger"
+    metrics_row = dbc.Row([
+        dbc.Col(metric_card("Total Return", f"{total_ret:+.2f}%", ret_color), md=2),
+        dbc.Col(metric_card("Annual Return", f"{metrics.get('annualized_return_pct', 0):+.2f}%", ret_color), md=2),
+        dbc.Col(metric_card("Win Rate", f"{metrics.get('win_rate', 0):.1f}%", "info"), md=2),
+        dbc.Col(metric_card("Sharpe", f"{metrics.get('sharpe_ratio', 0):.2f}", "primary"), md=2),
+        dbc.Col(metric_card("Max Drawdown", f"{metrics.get('max_drawdown_pct', 0):.2f}%", "danger"), md=2),
+        dbc.Col(metric_card("Total Trades", f"{metrics.get('total_trades', 0)}", "secondary"), md=2),
+    ], className="mb-4 g-3")
     
-    # Equity curve - use create_pnl_chart with daily_pnl values
-    if daily_pnl:
-        dates = [p.get("date", "") for p in daily_pnl]
-        pnl_values = [p.get("cumulative_pnl", 0) for p in daily_pnl]
-        chart_html = create_pnl_chart(dates, pnl_values, title="Binbin God Strategy P&L")
-    else:
-        chart_html = html.P("No chart data available", className="text-muted")
+    # P&L chart with benchmark support
+    pnl_dates = [p["date"] for p in daily_pnl] if daily_pnl else []
+    pnl_values = [p["cumulative_pnl"] for p in daily_pnl] if daily_pnl else []
+    initial_capital = params.get("initial_capital", 150000)
+    benchmark_data = result.get("benchmark_data", {})
+    pnl_chart = dcc.Graph(figure=create_pnl_chart(
+        pnl_dates, 
+        pnl_values, 
+        benchmark_data=benchmark_data,
+        initial_capital=initial_capital
+    ))
     
-    # Trade log - use create_trade_history_table from monitoring
-    table_html = create_trade_history_table(trades) if trades else html.P("No trades", className="text-muted")
+    # Monthly heatmap
+    monthly = metrics.get("monthly_returns", {})
+    monthly_tupled = {(int(k.split("-")[0]), int(k.split("-")[1])): v for k, v in monthly.items()} if monthly else {}
+    heatmap = dcc.Graph(figure=create_monthly_heatmap(monthly_tupled)) if monthly_tupled else html.Div()
     
-    # MAG7 analysis
+    # Trade timeline chart
+    underlying_prices = result.get("underlying_prices", [])
+    trade_timeline = dcc.Graph(figure=create_trade_timeline_chart(
+        trades=trades,
+        daily_pnl=daily_pnl,
+        underlying_prices=underlying_prices,
+        title="BinbinGod Trade Timeline: Entry/Exit Points & Performance"
+    ))
+    
+    # Trades table (same columns as backtester)
+    trade_columns = [
+        {"headerName": "Entry", "field": "entry_date", "width": 100, "sort": "desc"},
+        {"headerName": "Exit", "field": "exit_date", "width": 100},
+        {"headerName": "Option Contract", "field": "contract_name", "width": 220},
+        {"headerName": "Type", "field": "trade_type", "width": 120},
+        {"headerName": "Strike", "field": "strike", "width": 80,
+         "valueFormatter": {"function": "d3.format(',.2f')(params.value)"}},
+        {"headerName": "Expiry", "field": "expiry", "width": 100},
+        {"headerName": "Right", "field": "right", "width": 80},
+        {"headerName": "Qty", "field": "quantity", "width": 60},
+        {"headerName": "Stock Entry $", "field": "underlying_entry", "width": 100,
+         "valueFormatter": {"function": "d3.format(',.2f')(params.value)"}},
+        {"headerName": "Stock Exit $", "field": "underlying_exit", "width": 100,
+         "valueFormatter": {"function": "d3.format(',.2f')(params.value)"}},
+        {"headerName": "Option Entry $", "field": "entry_price", "width": 90,
+         "valueFormatter": {"function": "d3.format(',.2f')(params.value)"}},
+        {"headerName": "Option Exit $", "field": "exit_price", "width": 90,
+         "valueFormatter": {"function": "d3.format(',.2f')(params.value)"}},
+        {"headerName": "P&L", "field": "pnl", "width": 100,
+         "valueFormatter": {"function": "d3.format(',.2f')(params.value)",
+         "cellStyle": {"function": "params.value >= 0 ? {'color': '#26a69a'} : {'color': '#ef5350'}"}}},
+        {"headerName": "Reason", "field": "exit_reason", "width": 120},
+    ]
+    trades_table = create_data_table(trades, trade_columns, "bbg-trades-table", height=450) if trades else html.P("No trades", className="text-muted")
+    
+    # Additional metrics row
+    extra_row = dbc.Row([
+        dbc.Col(metric_card("Avg Profit", f"${metrics.get('avg_profit', 0):,.2f}", "success"), md=3),
+        dbc.Col(metric_card("Avg Loss", f"${metrics.get('avg_loss', 0):,.2f}", "danger"), md=3),
+        dbc.Col(metric_card("Profit Factor", f"{metrics.get('profit_factor', 0):.2f}", "primary"), md=3),
+        dbc.Col(metric_card("Sortino", f"{metrics.get('sortino_ratio', 0):.2f}", "info"), md=3),
+    ], className="mb-3 g-3")
+    
+    # Holdings card
+    holdings_card = html.Div()
+    strategy_performance = result.get("strategy_performance", {})
+    if strategy_performance:
+        holdings_data = {
+            "shares_held": strategy_performance.get("shares_held", 0),
+            "cost_basis": strategy_performance.get("cost_basis", 0),
+            "options_held": strategy_performance.get("open_positions", []),
+        }
+        holdings_card = create_holdings_card(holdings_data)
+    
+    # Monitoring dashboard for wheel logic
+    monitoring_section = html.Div()
+    if strategy_performance and params.get("strategy") == "binbin_god":
+        monitoring_section = create_monitoring_dashboard(strategy_performance)
+    
+    # MAG7 analysis section (unique to BinbinGod)
     mag7_analysis = result.get("mag7_analysis", {})
     if mag7_analysis and "ranked_stocks" in mag7_analysis:
         ranked = mag7_analysis["ranked_stocks"]
         best = mag7_analysis.get("best_pick", {})
         
-        mag7_html = html.Div([
+        mag7_section = html.Div([
+            html.H5("MAG7 Stock Analysis", className="mt-4 mb-3"),
             dbc.Row([
                 dbc.Col([
                     html.H6("🏆 Best Pick:", className="fw-bold text-success"),
@@ -358,9 +435,10 @@ def run_binbin_backtest(
                     "Rank": i+1,
                     "Symbol": s["symbol"],
                     "Score": s["total_score"],
-                    "PE": s["metrics"]["pe_ratio"],
-                    "IV Rank": s["metrics"]["iv_rank"],
-                    "Price": f"${s['metrics']['price']:.0f}",
+                    "PE": s.get("pe_ratio", "N/A"),
+                    "IV Rank": s.get("iv_rank", "N/A"),
+                    "Momentum": f"{s.get('momentum', 0):.1f}",
+                    "Stability": f"{s.get('stability', 0):.1f}",
                 } for i, s in enumerate(ranked)]),
                 striped=True,
                 hover=True,
@@ -369,34 +447,41 @@ def run_binbin_backtest(
             ),
         ])
     else:
-        mag7_html = html.P("MAG7 analysis not available", className="text-muted")
+        mag7_section = html.Div()
     
-    # Results container
-    results_html = html.Div([
-        # Summary cards
-        dbc.Row([
-            dbc.Col(html.H3(f"Total Return: {metrics.get('total_return_pct', 0):+.2f}%", 
-                           className="text-center p-3 border rounded bg-light"), md=3),
-            dbc.Col(html.H3(f"Win Rate: {metrics.get('win_rate', 0):.1f}%", 
-                           className="text-center p-3 border rounded bg-light"), md=3),
-            dbc.Col(html.H3(f"Sharpe: {metrics.get('sharpe_ratio', 0):.2f}", 
-                           className="text-center p-3 border rounded bg-light"), md=3),
-            dbc.Col(html.H3(f"Trades: {len(trades)}", 
-                           className="text-center p-3 border rounded bg-light"), md=3),
-        ], className="mb-4"),
-        
-        # Charts
-        dbc.Card([
-            dbc.CardHeader("Equity Curve", className="fw-bold"),
-            dbc.CardBody(chart_html),
-        ], className="mb-4"),
-        
-        # Trade log
-        dbc.Card([
-            dbc.CardHeader("Trade Log", className="fw-bold"),
-            dbc.CardBody(table_html),
-        ], className="mb-4"),
+    # Build complete content
+    content = html.Div([
+        html.H5("Performance Summary", className="mb-3"),
+        metrics_row,
+        pnl_chart,
+        html.H5("Additional Metrics", className="mt-4 mb-3"),
+        extra_row,
+        heatmap,
+        holdings_card,
+        monitoring_section,
+        html.H5("Trade Timeline Analysis", className="mt-4 mb-3"),
+        trade_timeline,
+        html.H5("Trade Log", className="mt-4 mb-3"),
+        trades_table,
+        mag7_section,
     ])
     
-    return result, results_html, mag7_html
+    # Add trade history and phase transitions if available
+    if strategy_performance:
+        trade_history = strategy_performance.get("trade_history", [])
+        phase_history = strategy_performance.get("phase_history", [])
+        
+        if trade_history:
+            content.children.append(html.Div([
+                html.H5("Recent Trade History", className="mt-4 mb-3"),
+                create_trade_history_table(trade_history),
+            ]))
+        
+        if phase_history:
+            content.children.append(html.Div([
+                html.H5("Phase Transition Log", className="mt-4 mb-3"),
+                create_phase_transition_log(phase_history),
+            ]))
+    
+    return result, content, no_update
 
