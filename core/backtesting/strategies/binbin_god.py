@@ -68,6 +68,10 @@ class BinbinGodStrategy(BaseStrategy):
     Implements BOTH Sell Put and Covered Call phases.
     """
     
+    @property
+    def name(self) -> str:
+        return "binbin_god"
+    
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         self.config = config
@@ -164,6 +168,163 @@ class BinbinGodStrategy(BaseStrategy):
         
         return best_symbol
     
+    def generate_signals(
+        self,
+        current_date: str,
+        underlying_price: float,
+        iv: float,
+        open_positions: list,
+        position_mgr=None,
+    ) -> list[Signal]:
+        """Generate signals for backtesting (standard interface).
+        
+        This method adapts the real-time generate_signal() to the backtesting interface.
+        """
+        from datetime import datetime
+        
+        # Check if we already have max positions
+        wheel_positions = [
+            p for p in open_positions 
+            if p.trade_type in ("BINBIN_PUT", "BINBIN_CALL")
+        ]
+        if len(wheel_positions) >= self.max_positions:
+            return []
+        
+        # Select best stock if MAG7_AUTO
+        if self.symbol == "MAG7_AUTO":
+            # Create minimal market_data for stock selection
+            market_data = {
+                'current_date': current_date,
+                'underlying_price': underlying_price,
+                'iv': iv,
+            }
+            actual_symbol = self._select_best_stock(market_data)
+        else:
+            actual_symbol = self.symbol
+        
+        # Generate signal based on phase
+        if self.phase == "SP":
+            return self._generate_backtest_put_signal(
+                actual_symbol, current_date, underlying_price, iv, position_mgr
+            )
+        else:  # CC phase
+            return self._generate_backtest_call_signal(
+                actual_symbol, current_date, underlying_price, iv, position_mgr
+            )
+    
+    def _generate_backtest_put_signal(
+        self,
+        symbol: str,
+        current_date: str,
+        underlying_price: float,
+        iv: float,
+        position_mgr=None,
+    ) -> list[Signal]:
+        """Generate Sell Put signal for backtesting."""
+        from datetime import timedelta
+        from core.backtesting.pricing import OptionsPricer
+        
+        T = self.dte_max / 365.0
+        dte_days = int(self.dte_max)
+        entry = datetime.strptime(current_date, "%Y-%m-%d")
+        expiry_date = entry + timedelta(days=dte_days)
+        expiry_str = expiry_date.strftime("%Y%m%d")
+        
+        # Use put-specific delta
+        original_delta = self.delta_target
+        self.delta_target = self.put_delta
+        strike = self.select_strike(underlying_price, iv, T, "P")
+        self.delta_target = original_delta
+        
+        premium = OptionsPricer.put_price(underlying_price, strike, T, iv)
+        delta = OptionsPricer.delta(underlying_price, strike, T, iv, "P")
+        
+        # Position sizing using position manager
+        if position_mgr:
+            max_contracts = position_mgr.calculate_position_size(
+                margin_per_contract=strike * 100,
+                max_positions=self.max_positions,
+            )
+        else:
+            # Fallback: 1 contract per $10k
+            max_contracts = min(int(self.initial_capital / 10000), self.max_positions)
+        
+        if max_contracts <= 0:
+            return []
+        
+        quantity = -max_contracts  # Sell
+        
+        return [Signal(
+            symbol=symbol,
+            trade_type="BINBIN_PUT",
+            right="P",
+            strike=strike,
+            expiry=expiry_str,
+            quantity=quantity,
+            iv=iv,
+            delta=delta,
+            premium=premium,
+            underlying_price=underlying_price,
+            margin_requirement=strike * 100,
+        )]
+    
+    def _generate_backtest_call_signal(
+        self,
+        symbol: str,
+        current_date: str,
+        underlying_price: float,
+        iv: float,
+        position_mgr=None,
+    ) -> list[Signal]:
+        """Generate Covered Call signal for backtesting."""
+        from datetime import timedelta
+        from core.backtesting.pricing import OptionsPricer
+        
+        # Can only sell calls for shares we own
+        if self.stock_holding.shares <= 0:
+            # Fallback to SP phase
+            self.phase = "SP"
+            return self._generate_backtest_put_signal(
+                symbol, current_date, underlying_price, iv, position_mgr
+            )
+        
+        T = self.dte_max / 365.0
+        dte_days = int(self.dte_max)
+        entry = datetime.strptime(current_date, "%Y-%m-%d")
+        expiry_date = entry + timedelta(days=dte_days)
+        expiry_str = expiry_date.strftime("%Y%m%d")
+        
+        # Use call-specific delta
+        original_delta = self.delta_target
+        self.delta_target = self.call_delta
+        strike = self.select_strike(underlying_price, iv, T, "C")
+        self.delta_target = original_delta
+        
+        premium = OptionsPricer.call_price(underlying_price, strike, T, iv)
+        delta = OptionsPricer.delta(underlying_price, strike, T, iv, "C")
+        
+        # Covered call: 1 contract per 100 shares owned
+        max_contracts = min(self.stock_holding.shares // 100, self.max_positions)
+        
+        if max_contracts <= 0:
+            return []
+        
+        quantity = -max_contracts  # Sell
+        
+        return [Signal(
+            symbol=symbol,
+            trade_type="BINBIN_CALL",
+            right="C",
+            strike=strike,
+            expiry=expiry_str,
+            quantity=quantity,
+            iv=iv,
+            delta=delta,
+            premium=premium,
+            underlying_price=underlying_price,
+            margin_requirement=0.0,  # No additional margin - shares are collateral
+        )]
+    
     def generate_signal(
         self,
         symbol: str,
@@ -173,7 +334,7 @@ class BinbinGodStrategy(BaseStrategy):
         portfolio: Dict[str, Any],
         market_data: Dict[str, Any],
     ) -> Signal | None:
-        """Generate trading signal for Binbin God strategy."""
+        """Generate trading signal for Binbin God strategy (real-time interface)."""
         
         # If symbol is MAG7_AUTO, select the best stock
         if self.symbol == "MAG7_AUTO":
