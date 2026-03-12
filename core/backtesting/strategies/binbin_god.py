@@ -121,11 +121,41 @@ class BinbinGodStrategy(BaseStrategy):
                 
             data = market_data[symbol]
             
-            # Extract metrics (use defaults if not available)
-            pe_ratio = data.get("fundamentals", {}).get("pe_ratio", 25.0)
-            iv_rank = data.get("options", {}).get("iv_rank", 50.0)
-            momentum = data.get("technical", {}).get("momentum_score", 50.0)
-            stability = data.get("technical", {}).get("stability_score", 50.0)
+            # Check if this is backtest mode (data is list of bars)
+            if isinstance(data, list):
+                # Backtest mode: calculate metrics from price bars
+                if len(data) < 20:
+                    continue  # Need at least 20 days for calculations
+                
+                # Extract latest bar
+                latest_bar = data[-1]
+                current_price = latest_bar["close"]
+                
+                # Calculate momentum from recent returns
+                prev_20_price = data[-20]["close"] if len(data) >= 20 else data[0]["close"]
+                momentum = ((current_price - prev_20_price) / prev_20_price) * 100
+                
+                # Use IV as proxy (assume 50% rank for simplicity)
+                iv_rank = 50.0
+                
+                # Stability proxy (use recent volatility)
+                prices = [bar["close"] for bar in data[-30:]]
+                returns = [(prices[i] - prices[i-1]) / prices[i-1] for i in range(1, len(prices))]
+                if returns:
+                    import statistics
+                    stability = 100 - (statistics.stdev(returns) * 100)  # Lower vol = higher stability
+                else:
+                    stability = 50.0
+                
+                # PE ratio (use placeholder for now)
+                pe_ratio = 25.0
+                
+            else:
+                # Real-time mode: use provided fundamentals
+                pe_ratio = data.get("fundamentals", {}).get("pe_ratio", 25.0)
+                iv_rank = data.get("options", {}).get("iv_rank", 50.0)
+                momentum = data.get("technical", {}).get("momentum_score", 50.0)
+                stability = data.get("technical", {}).get("stability_score", 50.0)
             
             # Normalize PE ratio (lower is better, invert the score)
             pe_score = max(0, min(100, 100 - pe_ratio))

@@ -59,7 +59,22 @@ class BacktestEngine:
         strategy = strategy_cls(params)
 
         # Fetch historical price data (or generate synthetic data)
-        bars = self._get_historical_data(symbol, start_date, end_date, use_synthetic=use_synthetic)
+        # For BinbinGod strategy with MAG7_AUTO, fetch data for all MAG7 stocks
+        if strategy_name == "binbin_god" and symbol == "MAG7_AUTO":
+            from core.backtesting.strategies.binbin_god import MAG7_STOCKS
+            # Fetch data for all MAG7 stocks (strategy will select dynamically)
+            mag7_data = {}
+            for mag7_symbol in MAG7_STOCKS:
+                mag7_data[mag7_symbol] = self._get_historical_data(
+                    mag7_symbol, start_date, end_date, use_synthetic=use_synthetic
+                )
+            # Use the first stock's data as primary (strategy will switch as needed)
+            bars = mag7_data[list(mag7_data.keys())[0]]
+            # Store all MAG7 data in strategy for dynamic selection
+            strategy.mag7_data = mag7_data
+        else:
+            bars = self._get_historical_data(symbol, start_date, end_date, use_synthetic=use_synthetic)
+        
         if not bars:
             raise ValueError(f"No historical data for {symbol}")
 
