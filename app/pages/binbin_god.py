@@ -4,13 +4,14 @@ import dash
 from dash import html, dcc, callback, Output, Input, State, no_update
 import dash_bootstrap_components as dbc
 import pandas as pd
-from app.components.tables import metric_card, create_data_table, create_trade_history_table, create_performance_metrics_card
+from app.components.tables import metric_card, create_data_table
 from app.components.charts import create_pnl_chart, create_monthly_heatmap, create_trade_timeline_chart
 from app.components.monitoring import (
     create_monitoring_dashboard,
     create_trade_history_table,
     create_phase_transition_log,
     create_holdings_card,
+    create_performance_metrics_card,
 )
 from app.services import get_services
 
